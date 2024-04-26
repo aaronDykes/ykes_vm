@@ -1,0 +1,37 @@
+class Nest
+{
+  init(a, b, c)
+  {
+    this.a = a;
+    this.b = b;
+    this.c = c;
+  }
+  set_a(val)
+  {
+    this.a += val;
+  }
+
+  f()
+  {
+    this.set_a(41);
+    return this.a;
+  }
+
+  g()
+  {
+    return this.b;
+  }
+
+  h()
+  {
+    return this.c;
+  }
+
+  sum()
+  {
+    return this.f() + this.g() + this.h();
+  }
+
+}
+
+

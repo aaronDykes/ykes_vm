@@ -1,0 +1,22 @@
+class FIB
+{
+    fib(n) {
+        if (n < 2) return n;
+        return this.fib(n - 2) + this.fib(n - 1);
+    }
+
+    print_fib(n)
+    {
+        for (var i = 1; i < n; i++)
+          pout (this.fib(i));
+    }
+
+
+    res()
+    {
+        var start = clock();
+        this.print_fib(30);
+        pout(clock() - start);
+    }
+
+}

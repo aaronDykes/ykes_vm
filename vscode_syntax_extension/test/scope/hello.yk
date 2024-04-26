@@ -1,0 +1,14 @@
+var cp="Hello sir!";
+{
+    var hello=6969;
+    hello=hello + " is a number!"; 
+    pout hello;
+    
+    {
+        var hello=hello + " " + 6969;
+        pout hello;
+    } 
+    pout hello; 
+}
+
+pout cp;

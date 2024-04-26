@@ -1,0 +1,39 @@
+{
+  "name": "ykes-lang-support",
+  "displayName": "ykes-lang",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "ykes",
+        "aliases": [
+          "ykes",
+          "yks",
+          "ys",
+          "yke"
+        ],
+        "extensions": [
+          ".yk",
+          ".ykes",
+          ".yke",
+          ".ys"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ykes",
+        "scopeName": "source.yk",
+        "path": "./syntaxes/ykes.tmLanguage.json"
+      }
+    ]
+  }
+}

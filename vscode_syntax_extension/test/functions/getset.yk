@@ -1,0 +1,19 @@
+
+class GetSet
+{
+
+    init(set)
+    {
+        this.set = set;
+    }
+    setter(set)
+    {
+        this.set += set;
+    }
+    getter()
+    {
+        return this.set;
+    }
+    
+}
+

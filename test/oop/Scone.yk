@@ -1,0 +1,12 @@
+class Scone
+{
+    
+    topping(first, second, third)
+    {
+        var str = third + " scones with " + first + "and " + second;
+        pout(str);
+        rm(str);
+    }
+}
+
+

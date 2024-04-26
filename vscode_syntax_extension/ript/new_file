@@ -1,0 +1,21 @@
+#!/bin/zsh
+
+source ~/.zshrc
+
+ykes
+
+inc_def_name=$(echo $1 | tr a-z A-Z)
+inc_name=$1
+
+inc=$YKES/cart/includes
+src=$YKES/cart
+
+
+printf "#include \""$inc_name".h\"\n\n" > $src/"$inc_name.c"
+
+printf "#ifndef _"$inc_def_name"_H\n\
+#define _"$inc_def_name"_H\n\n\
+struct $inc_name \n\
+{\n\
+};\n\n\
+#endif" > $inc/"$inc_name.h"
