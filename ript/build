@@ -2,13 +2,13 @@
 
 source ~/.zshrc
 
-ykes
+vm
 
 
 # DYLD_INSERT_LIBRARIES=lib/libarena.dylib ./ykes
 #cd $YKES/arena
 #mk
 #mv *.o objects
-cd $YKES/cart
+cd $VMYKES/cart
 mk
 # mv ykes *.o *.d objects

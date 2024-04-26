@@ -1,9 +1,9 @@
 #!/bin/zsh
 source ~/.zshrc
-ykes
+vm
 
 ./wipe
-cd $YKES/cart
+cd $VMYKES/cart
 mk
 c
 

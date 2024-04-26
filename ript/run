@@ -1,8 +1,8 @@
 #!/bin/zsh
 source ~/.zshrc
-ykes
+vm
 
-cd $YKES/cart
+cd $VMYKES/cart
 mk
 c
 # DYLD_INSERT_LIBRARIES=~/arena/lib/libarena.dylib ./ykes

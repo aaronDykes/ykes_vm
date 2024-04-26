@@ -21,22 +21,54 @@ struct CallFrame
     Stack *slots;
 };
 
+#define ZERO_FLAG 0x01
+#define NEG_FLAG 0x02
+
 struct vm
 {
     int frame_count;
     int argc;
     int cargc;
 
+    uint8_t flags;
+
+    Arena
+        r1,
+        r2,
+        r3,
+        acc;
+
+    Element e1, e2; /* functions, instances and data structures */
+
     CallFrame frames[FRAMES_MAX];
     Stack *stack;
+
     Stack *call_stack;
     Stack *method_call_stack;
     Stack *class_stack;
     Stack *native_calls;
-    Element pop_val;
+
+    // Element pop_val;
     Upval *open_upvals;
     Table *glob;
 };
+
+// struct vm
+// {
+//     int frame_count;
+//     int argc;
+//     int cargc;
+
+//     CallFrame frames[FRAMES_MAX];
+//     Stack *stack;
+//     Stack *call_stack;
+//     Stack *method_call_stack;
+//     Stack *class_stack;
+//     Stack *native_calls;
+//     Element pop_val;
+//     Upval *open_upvals;
+//     Table *glob;
+// };
 
 vm machine;
 

@@ -129,6 +129,21 @@ typedef enum
     OP_JMP,
     OP_LOOP,
 
+    OP_MOV_R1,
+    OP_MOV_R2,
+    OP_MOV_R3,
+
+    OP_MOV_E1,
+    OP_MOV_E2,
+
+    OP_STR_R1,
+    OP_STR_R2,
+    OP_STR_R3,
+    OP_STR_ACC,
+
+    OP_STR_E1,
+    OP_STR_E2,
+
     OP_CALL,
     OP_METHOD,
 
