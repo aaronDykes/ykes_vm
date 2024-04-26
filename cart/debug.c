@@ -169,6 +169,7 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_RM", c, offset);
     case OP_GET_GLOBAL:
         return simple_instruction("OP_GET_GLOBAL", offset);
+
     case OP_SET_GLOBAL:
         return simple_instruction("OP_SET_GLOBAL", offset);
     case OP_GLOBAL_DEF:
@@ -204,18 +205,7 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_GET_PROP", c, offset);
     case OP_SET_PROP:
         return byte_instruction("OP_SET_PROP", c, offset);
-    case OP_MOV_R:
-        break;
-    case OP_MOV_E:
-        break;
-    case OP_STR_R:
-        break;
-    case OP_STR_E:
-        break;
-    case OP_STR_R_ACC:
-        break;
-    case OP_STR_E_ACC:
-        break;
+
     default:
         printf("Unkown opcode: %d\n", offset);
         return ++offset;

@@ -19,6 +19,7 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
     a->call_count = 0;
     a->class_count = 0;
     a->current_instance = -1;
+    a->expr_count = 0;
 
     a->array_index = 0;
     a->array_set = 0;
@@ -416,10 +417,17 @@ static void var_dec(Compiler *c)
     if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
+
+        c->expr_count = 0;
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+
+        // emit_byte(c, (el.type == ARENA) ? OP_MOV_R1 : OP_MOV_R2);
+        emit_byte(c, (el.type == ARENA) ? OP_STR_R1 : OP_STR_E2);
         emit_bytes(c, set, (uint8_t)glob);
     }
     else
@@ -953,11 +961,17 @@ static void _or(Compiler *c)
 
 static void binary(Compiler *c)
 {
+    if (c->expr_count == 0)
+    {
+        emit_byte(c, OP_MOV_R1);
+        c->expr_count++;
+    }
     int t = c->parser.pre.type;
 
     PRule *rule = get_rule(t);
     parse_precedence((Precedence)rule->prec + 1, c);
 
+    emit_byte(c, OP_MOV_R2);
     switch (t)
     {
     case TOKEN_OP_ADD:
@@ -1119,7 +1133,14 @@ static const char *parse_string(Compiler *c)
 }
 static void cstr(Compiler *c)
 {
+
     emit_constant(c, CString(parse_string(c)));
+
+    if (c->expr_count == 0)
+    {
+        emit_byte(c, OP_MOV_R1);
+        c->expr_count++;
+    }
 }
 static void string(Compiler *c)
 {
@@ -1639,6 +1660,7 @@ static void id(Compiler *c)
     if (arg != -1)
     {
         emit_bytes(c, OP_GET_CLOSURE, (uint8_t)arg);
+        // emit_byte(c, OP_STR_E2);
         return;
     }
 
@@ -1688,21 +1710,36 @@ static void id(Compiler *c)
     else if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
+
+        c->expr_count = 0;
+
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+
+        emit_byte(c, (el.type == ARENA) ? OP_STR_R1 : OP_STR_E2);
         emit_bytes(c, set, (uint8_t)arg);
     }
     else if (match(TOKEN_ADD_ASSIGN, &c->parser))
     {
+        // emit_byte(c, OP_MOV_R2);
         emit_bytes(c, get, (uint8_t)arg);
+        emit_byte(c, OP_MOV_R1);
+        c->expr_count++;
         expression(c);
+        // emit_bytes(c, get, (uint8_t)arg);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_ADD);
+
+        c->expr_count = 0;
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+        emit_bytes(c, (el.type == ARENA) ? OP_STR_R1 : OP_STR_E2, OP_ADD);
         emit_bytes(c, set, (uint8_t)arg);
     }
     else if (match(TOKEN_SUB_ASSIGN, &c->parser))
@@ -1713,25 +1750,31 @@ static void id(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_SUB);
+        c->expr_count = 0;
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+        emit_bytes(c, OP_STR_R1, OP_SUB);
         emit_bytes(c, set, (uint8_t)arg);
     }
     else if (match(TOKEN_MUL_ASSIGN, &c->parser))
     {
 
         emit_bytes(c, get, (uint8_t)arg);
+
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_MUL);
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+        emit_bytes(c, OP_STR_R1, OP_MUL);
         emit_bytes(c, set, (uint8_t)arg);
     }
     else if (match(TOKEN_DIV_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, (uint8_t)arg);
         expression(c);
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+        emit_byte(c, (el.type == ARENA) ? OP_STR_ACC : OP_STR_E2);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
@@ -1743,6 +1786,8 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, (uint8_t)arg);
         expression(c);
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+        emit_byte(c, (el.type == ARENA) ? OP_STR_ACC : OP_STR_E2);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
@@ -1754,6 +1799,8 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, (uint8_t)arg);
         expression(c);
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+        emit_byte(c, (el.type == ARENA) ? OP_STR_ACC : OP_STR_E2);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
@@ -1765,6 +1812,8 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, (uint8_t)arg);
         expression(c);
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+        emit_byte(c, (el.type == ARENA) ? OP_STR_ACC : OP_STR_E2);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))

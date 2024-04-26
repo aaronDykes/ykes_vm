@@ -35,7 +35,6 @@ struct vm
     Arena
         r1,
         r2,
-        r3,
         acc;
 
     Element e1, e2; /* functions, instances and data structures */

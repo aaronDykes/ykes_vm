@@ -67,14 +67,16 @@ typedef enum
     OP_GET_NATIVE,
 
     OP_GLOBAL_DEF,
-    OP_GET_GLOBAL,
     OP_SET_GLOBAL,
+    OP_GET_GLOBAL,
 
     OP_SET_FUNC_VAR,
 
     OP_RESET_ARGC,
+
     OP_GET_LOCAL,
     OP_SET_LOCAL,
+
     OP_SET_LOCAL_PARAM,
 
     OP_GET_UPVALUE,
@@ -99,6 +101,7 @@ typedef enum
     OP_INC,
     OP_DEC,
 
+    OP_ACC,
     OP_ADD,
     OP_SUB,
     OP_MUL,
@@ -131,18 +134,19 @@ typedef enum
 
     OP_MOV_R1,
     OP_MOV_R2,
-    OP_MOV_R3,
+    OP_MOV_ACC,
 
     OP_MOV_E1,
     OP_MOV_E2,
 
     OP_STR_R1,
     OP_STR_R2,
-    OP_STR_R3,
-    OP_STR_ACC,
 
     OP_STR_E1,
     OP_STR_E2,
+
+    OP_STR_ACC,
+    OP_ZERO_ACC,
 
     OP_CALL,
     OP_METHOD,

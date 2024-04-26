@@ -70,6 +70,7 @@ struct Compiler
     int param_count;
     int class_count;
     int native_count;
+    int expr_count;
 
     // const char *src;
     uint8_t array_index;
