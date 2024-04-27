@@ -117,7 +117,6 @@ static void advance_compiler(Parser *parser);
 
 static void declaration(Compiler *c);
 static void call(Compiler *c);
-static void call_expect_arity(Compiler *c, int arity);
 
 static int argument_list(Compiler *c);
 
@@ -193,6 +192,7 @@ static void error_at(Token t, Parser *parser, const char *err);
 
 static void emit_byte(Compiler *c, uint8_t byte);
 static void emit_bytes(Compiler *c, uint8_t b1, uint8_t b2);
+static void emit_3_bytes(Compiler *c, uint8_t b1, int arg);
 static void emit_constant(Compiler *c, Arena ar);
 static void emit_return(Compiler *c);
 
@@ -224,8 +224,6 @@ static int add_upvalue(Compiler *c, int upvalue, bool t);
 static Arena parse_func_id(Compiler *c);
 static void push_array_val(Compiler *c);
 
-static void parse_native_argc0(Compiler *c);
-static void parse_native_argc1(Compiler *c);
 static void parse_native_var_arg(Compiler *c);
 
 static void dot(Compiler *c);

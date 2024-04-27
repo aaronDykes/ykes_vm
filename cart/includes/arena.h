@@ -134,18 +134,23 @@ typedef enum
 
     OP_MOV_R1,
     OP_MOV_R2,
-    OP_MOV_ACC,
+    OP_MOV_R3,
+    OP_MOV_R2_R1,
+    OP_MOV_R1_R2,
+    OP_MOV_R3_R1,
+    OP_MOV_R1_R3,
+    OP_MOV_R3_R2,
 
     OP_MOV_E1,
     OP_MOV_E2,
 
     OP_STR_R1,
     OP_STR_R2,
+    OP_STR_R3,
 
     OP_STR_E1,
     OP_STR_E2,
 
-    OP_STR_ACC,
     OP_ZERO_ACC,
 
     OP_CALL,

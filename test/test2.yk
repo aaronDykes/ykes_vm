@@ -5,12 +5,14 @@
 sr fuck_shit()
 {
 
-    var hello=10*10;
-    hello=hello+(10*10);
-    var st1 = "This is a string";
-    var st2 = "This is another string";
-    var st3 = "This is a vector of characters";
-    pout(hello, st1, st2, st3);
+    var hello=(10*10*10)+5;
+
+    
+    hello += (5 * 10);
+
+    // hello=hello+5;
+
+    pout(hello);
 
 }
 
