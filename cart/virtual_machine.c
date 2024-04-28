@@ -28,6 +28,11 @@ void initVM(void)
     machine.r1 = Int(0);
     machine.r2 = Int(0);
     machine.r3 = Int(0);
+    machine.r4 = Int(0);
+
+    machine.e1 = null_obj();
+    machine.e2 = null_obj();
+    machine.e3 = null_obj();
 
     define_native(native_name("clock"), clock_native);
     define_native(native_name("square"), square_native);
@@ -527,78 +532,87 @@ Interpretation run(void)
         case OP_POP:
             POP();
             break;
-
         case OP_ADD:
-            machine.r1 = _add(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _add(machine.r1, machine.r2))));
             break;
         case OP_SUB:
-            machine.r1 = _sub(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _sub(machine.r1, machine.r2))));
             break;
         case OP_MUL:
-            machine.r1 = _mul(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _mul(machine.r1, machine.r2))));
             break;
         case OP_MOD:
-            machine.r1 = _mod(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _mod(machine.r1, machine.r2))));
             break;
         case OP_DIV:
-            machine.r1 = _div(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _div(machine.r1, machine.r2))));
             break;
         case OP_EQ:
-            machine.r1 = _eq(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _eq(machine.r1, machine.r2))));
             break;
         case OP_NE:
-            machine.r1 = _ne(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _ne(machine.r1, machine.r2))));
             break;
         case OP_SEQ:
-            machine.r1 = _seq(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _seq(machine.r1, machine.r2))));
             break;
         case OP_SNE:
-            machine.r1 = _sne(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _sne(machine.r1, machine.r2))));
             break;
         case OP_LT:
-            machine.r1 = _lt(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _lt(machine.r1, machine.r2))));
             break;
         case OP_LE:
-            machine.r1 = _le(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _le(machine.r1, machine.r2))));
             break;
         case OP_GT:
-            machine.r1 = _gt(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _gt(machine.r1, machine.r2))));
             break;
         case OP_GE:
-            machine.r1 = _ge(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _ge(machine.r1, machine.r2))));
             break;
         case OP_OR:
-            machine.r1 = _or(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _or(machine.r1, machine.r2))));
             break;
         case OP_AND:
-            machine.r1 = _and(machine.r1, machine.r2);
+            PUSH(OBJ((machine.r1 = _and(machine.r1, machine.r2))));
             break;
         case OP_GET_ACCESS:
         {
 
-            Element el = _get_access(machine.e1, machine.e2);
+            Element el = _get_access(machine.r1, machine.e3);
+
+            if (el.type != ARENA)
+                machine.e1 = el;
+
+            else
+                machine.r1 = el.arena;
+
             if (el.type != NULL_OBJ)
             {
-                machine.e2 = el;
-                PUSH(machine.e2);
+                PUSH(el);
                 break;
             }
             return INTERPRET_RUNTIME_ERR;
         }
+        case OP_SET_ACCESS:
+
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+            // else
+            // machine.e1 = machine.e2;
+
+            _set_access(machine.e1, machine.r4, machine.e3);
+            break;
         case OP_RESET_ARGC:
             machine.cargc = 0;
             machine.argc = 0;
             break;
         case OP_EACH_ACCESS:
         {
-            machine.e2 = _get_each_access(machine.e2, machine.cargc++);
-            PUSH(machine.e2);
-            // machine.e2 = el;
-        }
-        break;
-        case OP_SET_ACCESS:
-            _set_access(machine.e1, machine.r1, machine.e2);
+            PUSH((machine.e2 = _get_each_access(machine.e2, machine.cargc++)));
             break;
+        }
         case OP_PUSH_ARRAY_VAL:
         {
 
@@ -606,7 +620,7 @@ Interpretation run(void)
             if (res.type != NULL_OBJ)
             {
                 machine.e2 = res;
-                machine.r1 = Bool(machine.e2.type == VECTOR || machine.e2.type == STACK);
+                // machine.r1 = Bool(machine.e2.type == VECTOR || machine.e2.type == STACK);
                 break;
             }
             return INTERPRET_RUNTIME_ERR;
@@ -732,8 +746,17 @@ Interpretation run(void)
             // POP();
             break;
         case OP_GET_LOCAL:
-            PUSH(LOCAL());
+        {
+
+            Element el = LOCAL();
+
+            PUSH(el);
+
+            if (el.type == ARENA)
+                machine.r2 = el.arena;
+
             break;
+        }
         case OP_SET_LOCAL:
             LOCAL() = PEEK();
             break;
@@ -764,7 +787,7 @@ Interpretation run(void)
                 runtime_error("ERROR: Table argument must be a numeric value.");
                 return INTERPRET_RUNTIME_ERR;
             }
-            machine.e2 = TABLE(GROW_TABLE(NULL, machine.r1.as.Int));
+            PUSH((machine.e2 = TABLE(GROW_TABLE(NULL, machine.r1.as.Int))));
             break;
         case OP_GET_GLOBAL:
         {
@@ -772,14 +795,18 @@ Interpretation run(void)
             Arena var = READ_CONSTANT().arena;
             Element el = FIND_GLOB(var);
 
-            if (el.type != ARENA_NULL)
-            {
-                PUSH(el);
-                break;
-            }
+            // if (el.type != ARENA_NULL)
+            // {
+            PUSH(el);
+            if (el.type == ARENA)
+                machine.r2 = el.arena;
+            else
+                machine.e1 = el;
+            break;
+            // }
 
-            runtime_error("ERROR: Undefined property '%s'.", var.as.String);
-            return INTERPRET_RUNTIME_ERR;
+            // runtime_error("ERROR: Undefined property '%s'.", var.as.String);
+            // return INTERPRET_RUNTIME_ERR;
         }
 
         case OP_SET_GLOBAL:
@@ -828,9 +855,7 @@ Interpretation run(void)
         case OP_MOV_R3:
             machine.r3 = POP().arena;
             break;
-        case OP_ZERO_ACC:
-            machine.r1 = Int(0);
-            break;
+
         case OP_MOV_PEEK_E1:
             machine.e1 = PEEK();
             break;
@@ -843,12 +868,18 @@ Interpretation run(void)
         case OP_MOV_E2:
             machine.e2 = POP();
             break;
-
-        case OP_MOV_R2_R1:
-            machine.r1 = machine.r2;
+        case OP_MOV_E3:
+            machine.e3 = POP();
             break;
+
         case OP_MOV_R1_R2:
             machine.r2 = machine.r1;
+            break;
+        case OP_MOV_R1_R3:
+            machine.r3 = machine.r1;
+            break;
+        case OP_MOV_R2_R1:
+            machine.r1 = machine.r2;
             break;
         case OP_MOV_R3_R1:
             machine.r1 = machine.r3;
@@ -856,8 +887,46 @@ Interpretation run(void)
         case OP_MOV_R3_R2:
             machine.r2 = machine.r3;
             break;
-        case OP_MOV_R1_R3:
-            machine.r3 = machine.r1;
+
+        case OP_MOV_R1_E2:
+            machine.e2 = OBJ(machine.r1);
+            break;
+        case OP_MOV_R1_E1:
+            machine.e1 = OBJ(machine.r1);
+            break;
+
+        case OP_MOV_R1_R4:
+            machine.r4 = machine.r1;
+            break;
+        case OP_MOV_R2_E1:
+            machine.e1 = OBJ(machine.r2);
+            break;
+        case OP_MOV_R2_E2:
+            machine.e2 = OBJ(machine.r2);
+            break;
+
+        case OP_MOV_E2_E1:
+            machine.e1 = machine.e2;
+            break;
+        case OP_MOV_E2_E3:
+            machine.e3 = machine.e2;
+            break;
+        case OP_MOV_E3_E2:
+            machine.e2 = machine.e3;
+            break;
+
+        case OP_MOV_E1_E2:
+            machine.e2 = machine.e1;
+            break;
+        case OP_MOV_E1_E3:
+            machine.e3 = machine.e1;
+            break;
+
+        case OP_ZERO_E1:
+            machine.e1 = null_obj();
+            break;
+        case OP_ZERO_E2:
+            machine.e2 = null_obj();
             break;
         case OP_STR_R1:
             PUSH(OBJ(machine.r1));

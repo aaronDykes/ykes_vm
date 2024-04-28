@@ -71,6 +71,7 @@ struct Compiler
     int class_count;
     int native_count;
     bool first_expr;
+    bool element;
 
     // const char *src;
     uint8_t array_index;
@@ -86,7 +87,6 @@ struct Compiler
     Arena len;
     Arena ar_push;
     Arena ar_pop;
-    int current_instance;
 
     const char *cwd;
     const char *current_file;
@@ -298,7 +298,7 @@ static PRule rules[] = {
     [TOKEN_ALLOC_ARRAY] = {array_alloc, NULL, PREC_NONE},
     [TOKEN_ALLOC_VECTOR] = {vector_alloc, NULL, PREC_NONE},
     [TOKEN_ALLOC_STACK] = {stack_alloc, NULL, PREC_NONE},
-    [TOKEN_TABLE] = {table, NULL, PREC_NONE},
+    [TOKEN_TABLE] = {table, NULL, PREC_CALL},
     [TOKEN_CH_TERNARY] = {NULL, NULL, PREC_NONE},
     [TOKEN_CH_NULL_COALESCING] = {NULL, NULL, PREC_NONE},
 

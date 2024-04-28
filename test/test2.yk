@@ -31,8 +31,3 @@ another();
 
 
 
-
-var hello=5; 
-hello = hello + 5;
-
-pout(hello);

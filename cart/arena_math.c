@@ -2225,7 +2225,7 @@ Element _get_each_access(Element b, int index)
     }
 }
 
-Element _get_access(Element a, Element b)
+Element _get_access(Arena a, Element b)
 {
     switch (b.type)
     {
@@ -2233,28 +2233,26 @@ Element _get_access(Element a, Element b)
         switch (b.arena.type)
         {
         case ARENA_INTS:
-            return OBJ(_access_ints(b.arena.listof.Ints, a.arena, b.arena.count));
+            return OBJ(_access_ints(b.arena.listof.Ints, a, b.arena.count));
         case ARENA_LONGS:
-            return OBJ(_access_longs(b.arena.listof.Longs, a.arena, b.arena.count));
+            return OBJ(_access_longs(b.arena.listof.Longs, a, b.arena.count));
         case ARENA_DOUBLES:
-            return OBJ(_access_doubles(b.arena.listof.Doubles, a.arena, b.arena.count));
+            return OBJ(_access_doubles(b.arena.listof.Doubles, a, b.arena.count));
         case ARENA_STR:
         case ARENA_CSTR:
-            return OBJ(_access_string(b.arena.as.String, a.arena, b.arena.count));
+            return OBJ(_access_string(b.arena.as.String, a, b.arena.count));
         case ARENA_STRS:
-            return OBJ(_access_strings(b.arena.listof.Strings, a.arena, b.arena.count));
+            return OBJ(_access_strings(b.arena.listof.Strings, a, b.arena.count));
         default:
             goto ERR;
         }
     case TABLE:
-        if (a.type != ARENA)
-            goto ERR;
-        return find_entry(&b.table, &a.arena);
+        return find_entry(&b.table, &a);
 
     case VECTOR:
-        return OBJ(_access_arena(b.arena_vector, a.arena, (b.arena_vector - 1)->count));
+        return OBJ(_access_arena(b.arena_vector, a, (b.arena_vector - 1)->count));
     case STACK:
-        return _access_stack(b.stack, a.arena, b.stack->count);
+        return _access_stack(b.stack, a, b.stack->count);
     default:
     ERR:
         log_err("ERROR: access type mismatch.");

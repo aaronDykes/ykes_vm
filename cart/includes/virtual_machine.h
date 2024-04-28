@@ -32,8 +32,13 @@ struct vm
 
     uint8_t flags;
 
-    Element e1, e2;   /* functions, instances and data structures */
-    Arena r1, r2, r3; /* Everything else */
+    Element
+        e1,
+        e2, e3; /* functions, instances and data structures */
+    Arena
+        r1,
+        r2,
+        r3, r4; /* Everything else */
 
     CallFrame frames[FRAMES_MAX];
     Stack *stack;

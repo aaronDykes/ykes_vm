@@ -1,42 +1,20 @@
-class Tables
-{
-    tables()
-    {
-        var tab = Table(128);
 
-        var nest = Table();
-        var another_nest = Table();
+var tab = Table();
+var t = Table(); 
 
-        tab[69.999] = 420;
-        tab['a'] = "aa";
-        tab["Aaron"] = "Aaron";
-        tab["Dykes"] = "Dykes"; 
-        tab["Table"] = nest;
 
-        nest["nest"] = "Another!!!";
-        nest["another"] = another_nest;
+tab[69.999] = 420;
+tab['a'] = "aa";
 
-        another_nest["nest"] = "Another nest!!!!";
 
-        var t = Table(); 
+t["Table"] = tab;
 
-        t["Table"] = tab; 
 
-        pout(
-            t["Table"][69.999],
-            t["Table"]['a'],
-            t["Table"]["Aaron"],
-            t["Table"]["Dykes"],
-            t["Table"]["Table"]["nest"],
-            t["Table"]["Table"]["another"]["nest"]
-        );
-        
-        rm(t);
-        t = null;
-    }
+pout(
+    t["Table"][69.999],
+    t["Table"]['a']
 
-}
+);
 
-var t = Tables();
 
-t.tables();
+

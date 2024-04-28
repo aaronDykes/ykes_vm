@@ -23,7 +23,6 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
     a->scope_depth = 0;
     a->call_count = 0;
     a->class_count = 0;
-    a->current_instance = -1;
     a->first_expr = false;
 
     a->array_index = 0;
@@ -38,6 +37,7 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
     a->func = NULL;
     a->func = function(name);
     a->type = type;
+    a->element = false;
     // a->parser.current_file = b->base->current_file;
 
     if (b)
@@ -421,10 +421,7 @@ static void var_dec(Compiler *c)
             null_coalescing_statement(c);
 
         c->first_expr = false;
-        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
 
-        emit_byte(c, (el.type == ARENA) ? OP_STR_R1 : OP_STR_R2);
-        // emit_byte(c, OP_STR_R1);
         emit_3_bytes(c, set, glob);
     }
     else
@@ -1232,7 +1229,6 @@ static void array_alloc(Compiler *c)
         error("ERROR: Invalid expression inside of array allocation", &c->parser);
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after allocation.", &c->parser);
-    emit_byte(c, OP_MOV_R1);
 }
 static void vector_alloc(Compiler *c)
 {
@@ -1242,10 +1238,9 @@ static void vector_alloc(Compiler *c)
     {
         ar = GROW_ARENA(NULL, STACK_SIZE);
         emit_3_bytes(c, OP_CONSTANT, add_constant(&c->func->ch, VECT(ar)));
-        return;
     }
 
-    if (match(TOKEN_INT, &c->parser))
+    else if (match(TOKEN_INT, &c->parser))
     {
         ar = GROW_ARENA(NULL, atoi(c->parser.pre.start));
         emit_3_bytes(
@@ -1256,6 +1251,8 @@ static void vector_alloc(Compiler *c)
         error("ERROR: Invalid expression inside of vector allocation", &c->parser);
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after vector allocation.", &c->parser);
+    emit_byte(c, OP_MOV_E2);
+    c->element = true;
 }
 
 static void stack_alloc(Compiler *c)
@@ -1267,10 +1264,9 @@ static void stack_alloc(Compiler *c)
     {
         s = GROW_STACK(NULL, STACK_SIZE);
         emit_3_bytes(c, OP_CONSTANT, add_constant(&c->func->ch, STK(s)));
-        return;
     }
 
-    if (match(TOKEN_INT, &c->parser))
+    else if (match(TOKEN_INT, &c->parser))
     {
         s = stack(atoi(c->parser.pre.start));
         emit_3_bytes(
@@ -1281,7 +1277,7 @@ static void stack_alloc(Compiler *c)
         error("ERROR: Invalid expression inside of Stack allocation", &c->parser);
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after Stack allocation", &c->parser);
-    // emit_byte(c, OP_MOV_E2);
+    emit_byte(c, OP_MOV_E2);
 }
 
 static void table(Compiler *c)
@@ -1294,16 +1290,15 @@ static void table(Compiler *c)
         t = GROW_TABLE(NULL, STACK_SIZE);
         int cst = add_constant(&c->func->ch, TABLE(t));
         emit_3_bytes(c, OP_CONSTANT, cst);
-        // emit_byte(c, OP_MOV_E2);
-        return;
     }
     else
     {
         expression(c);
         emit_byte(c, OP_ALLOC_TABLE);
         consume(TOKEN_CH_RPAREN, "Expect `)` after Table declaration", &c->parser);
-        // emit_byte(c, OP_MOV_E2);
     }
+    // c->element = true;
+    emit_byte(c, OP_MOV_PEEK_E2);
 }
 
 static int resolve_native(Compiler *c, Arena *ar)
@@ -1459,21 +1454,23 @@ static void dot(Compiler *c)
     if (ar.as.hash == c->base->ar_push.as.hash)
     {
         push_array_val(c);
-        int exit = emit_jump(c, OP_JMPT);
-        emit_byte(c, OP_POP);
-        emit_3_bytes(c, c->array_set, c->array_index);
-        int falsey = emit_jump(c, OP_JMP);
-        patch_jump(c, exit);
-        emit_byte(c, OP_POP);
-        patch_jump(c, falsey);
+        emit_byte(c, OP_STR_E2);
+        // int exit = emit_jump(c, OP_JMPT);
+        // emit_byte(c, OP_POP);
+        // emit_3_bytes(c, c->array_set, c->array_index);
+        // int falsey = emit_jump(c, OP_JMP);
+        // patch_jump(c, exit);
+        // emit_byte(c, OP_POP);
+        // patch_jump(c, falsey);
         return;
     }
 
     if (ar.as.hash == c->base->ar_pop.as.hash)
     {
         pop_array_val(c);
-        emit_3_bytes(c, c->array_set, c->array_index);
-        emit_byte(c, OP_PUSH);
+        emit_byte(c, OP_STR_E2);
+        // emit_3_bytes(c, c->array_set, c->array_index);
+        // emit_byte(c, OP_PUSH);
         return;
     }
 
@@ -1484,118 +1481,175 @@ static void dot(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
+
+        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
+
+        if (el.type == ARENA)
+            emit_byte(c, OP_MOV_R1_E1);
+
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_ADD_ASSIGN, &c->parser))
     {
 
-        emit_byte(c, OP_PUSH_TOP);
+        // emit_byte(c, OP_PUSH_TOP);
+
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
+        emit_byte(c, OP_MOV_R1);
+
+        c->first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_ADD);
-        cst = add_constant(&c->func->ch, OBJ(ar));
+
+        emit_bytes(c, OP_ADD, OP_STR_R1);
+        emit_byte(c, OP_MOV_R1_E1);
+
+        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_SUB_ASSIGN, &c->parser))
     {
 
-        emit_byte(c, OP_PUSH_TOP);
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
+
+        emit_byte(c, OP_MOV_R1);
+        c->first_expr = true;
+
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        cst = add_constant(&c->func->ch, OBJ(ar));
+
+        emit_bytes(c, OP_SUB, OP_STR_R1);
+        emit_byte(c, OP_MOV_R1_E1);
+
+        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_MUL_ASSIGN, &c->parser))
     {
 
-        emit_byte(c, OP_PUSH_TOP);
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
+
+        emit_byte(c, OP_MOV_R1);
+        c->first_expr = true;
+
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_MUL);
-        cst = add_constant(&c->func->ch, OBJ(ar));
+
+        emit_bytes(c, OP_MUL, OP_STR_R1);
+        emit_byte(c, OP_MOV_R1_E1);
+
+        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_DIV_ASSIGN, &c->parser))
     {
 
-        emit_byte(c, OP_PUSH_TOP);
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
+
+        emit_byte(c, OP_MOV_R1);
+        c->first_expr = true;
+
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_DIV);
-        cst = add_constant(&c->func->ch, OBJ(ar));
+
+        emit_bytes(c, OP_DIV, OP_STR_R1);
+        emit_byte(c, OP_MOV_R1_E1);
+
+        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_MOD_ASSIGN, &c->parser))
     {
-        emit_byte(c, OP_PUSH_TOP);
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
 
+        emit_byte(c, OP_MOV_R1);
+        c->first_expr = true;
+
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_MOD);
-        cst = add_constant(&c->func->ch, OBJ(ar));
+
+        emit_bytes(c, OP_MOD, OP_STR_R1);
+        emit_byte(c, OP_MOV_R1_E1);
+
+        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_AND_ASSIGN, &c->parser))
     {
 
-        emit_byte(c, OP_PUSH_TOP);
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
+
+        emit_byte(c, OP_MOV_R1);
+        c->first_expr = true;
+
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        cst = add_constant(&c->func->ch, OBJ(ar));
+
+        emit_bytes(c, OP_AND, OP_STR_R1);
+        emit_byte(c, OP_MOV_R1_E1);
+
+        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_OR__ASSIGN, &c->parser))
     {
-        emit_byte(c, OP_PUSH_TOP);
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
 
+        emit_byte(c, OP_MOV_R1);
+        c->first_expr = true;
+
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        cst = add_constant(&c->func->ch, OBJ(ar));
+        emit_bytes(c, OP_OR, OP_STR_R1);
+        emit_byte(c, OP_MOV_R1_E1);
+
+        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else
     {
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
+        // emit_byte(c, OP_MOV_E2);
     }
-    c->base->current_instance = -1;
+
+    c->first_expr = false;
 }
 
 static void int_array(Compiler *c)
@@ -1698,19 +1752,32 @@ static void _access(Compiler *c)
 {
 
     expression(c);
+    c->first_expr = false;
+
     consume(TOKEN_CH_RSQUARE, "Expect closing brace after array access.", &c->parser);
+
+    emit_byte(c, OP_MOV_E1_E3);
+    emit_byte(c, OP_ZERO_E1);
 
     if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
+
+        emit_byte(c, OP_MOV_R1_R4);
         expression(c);
+        c->first_expr = false;
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
+
         emit_byte(c, OP_SET_ACCESS);
     }
     else
+    {
+        // emit_byte(c, OP_MOV_R2_R1);
         emit_byte(c, OP_GET_ACCESS);
+    }
 }
 
 static void _this(Compiler *c)
@@ -1747,7 +1814,6 @@ static void id(Compiler *c)
 
     if ((arg = resolve_instance(c, ar)) != -1)
     {
-        c->base->current_instance = arg;
 
         if (c->base->instances[arg]->init)
         {
@@ -1798,8 +1864,6 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
-        emit_byte(c, el.type == ARENA ? OP_STR_R1 : OP_STR_E2);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_ADD_ASSIGN, &c->parser))
@@ -1815,7 +1879,7 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_ADD, OP_STR_R1);
+        emit_byte(c, OP_ADD);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_SUB_ASSIGN, &c->parser))
@@ -1830,7 +1894,7 @@ static void id(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_bytes(c, OP_SUB, OP_STR_R1);
+        emit_byte(c, OP_SUB);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_MUL_ASSIGN, &c->parser))
@@ -1846,7 +1910,7 @@ static void id(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_bytes(c, OP_MUL, OP_STR_R1);
+        emit_byte(c, OP_MUL);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_DIV_ASSIGN, &c->parser))
@@ -1859,7 +1923,7 @@ static void id(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_bytes(c, OP_DIV, OP_STR_R1);
+        emit_byte(c, OP_DIV);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_MOD_ASSIGN, &c->parser))
@@ -1873,7 +1937,7 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_MOD, OP_STR_R1);
+        emit_byte(c, OP_MOD);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_AND_ASSIGN, &c->parser))
@@ -1887,9 +1951,8 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_AND, OP_STR_R1);
+        emit_byte(c, OP_AND);
         emit_3_bytes(c, set, arg);
-        c->first_expr = false;
     }
     else if (match(TOKEN_OR__ASSIGN, &c->parser))
     {
@@ -1902,20 +1965,19 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_OR, OP_STR_R1);
+        emit_byte(c, OP_OR);
         emit_3_bytes(c, set, arg);
     }
     else
     {
         emit_3_bytes(c, get, arg);
-        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
-        emit_byte(c, el.type == ARENA ? OP_MOV_PEEK_R2 : OP_MOV_PEEK_E2);
 
         if (check(TOKEN_CH_DOT, &c->parser))
             c->array_set = set,
             c->array_index = arg;
     }
     c->first_expr = false;
+    c->element = false;
 }
 
 static int parse_var(Compiler *c, Arena ar)

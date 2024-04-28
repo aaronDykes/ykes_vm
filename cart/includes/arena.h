@@ -138,14 +138,33 @@ typedef enum
     OP_MOV_R1,
     OP_MOV_R2,
     OP_MOV_R3,
-    OP_MOV_R2_R1,
+
     OP_MOV_R1_R2,
-    OP_MOV_R3_R1,
     OP_MOV_R1_R3,
+
+    OP_MOV_R2_R1,
+
+    OP_MOV_R3_R1,
     OP_MOV_R3_R2,
+
+    OP_MOV_R1_R4,
+    OP_MOV_R1_E2,
+    OP_MOV_R1_E1,
+    OP_MOV_R2_E1,
+    OP_MOV_R2_E2,
+
+    OP_MOV_E2_E1,
+    OP_MOV_E2_E3,
+    OP_MOV_E3_E2,
+    OP_ZERO_E1,
+    OP_ZERO_E2,
+
+    OP_MOV_E1_E2,
+    OP_MOV_E1_E3,
 
     OP_MOV_E1,
     OP_MOV_E2,
+    OP_MOV_E3,
     OP_MOV_PEEK_E1,
     OP_MOV_PEEK_E2,
 
@@ -155,8 +174,6 @@ typedef enum
 
     OP_STR_E1,
     OP_STR_E2,
-
-    OP_ZERO_ACC,
 
     OP_CALL,
     OP_METHOD,
