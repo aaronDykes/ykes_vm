@@ -1,6 +1,6 @@
 
-var hello=10+10;
+var i = 0;
 
-hello+=5;
+while (i < 10)
+    pout(i++);
 
-pout(hello);

@@ -16,7 +16,7 @@ if (69 == 69)
         {
             pout("wow, it's nested again");
             if (69 == 69)
-                pout("bing bong";) 
+                pout("bing bong");
         }
         
     }

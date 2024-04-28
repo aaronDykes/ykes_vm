@@ -12,9 +12,11 @@ sr fuck_shit()
 
     hello=hello+5;
 
+    hello++;
 
 
-    var bo = (hello == 1060);
+
+    var bo = (hello == 1061);
 
     pout(hello, bo);
 

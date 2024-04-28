@@ -528,6 +528,7 @@ static void for_statement(Compiler *c)
     if (!match(TOKEN_CH_SEMI, &c->parser))
     {
         expression(c);
+        c->first_expr = false;
         consume(TOKEN_CH_SEMI, "Expect `;` after 'for' condition.", &c->parser);
         exit = emit_jump(c, OP_JMPF);
         emit_byte(c, OP_POP);
@@ -538,6 +539,7 @@ static void for_statement(Compiler *c)
         int inc_start = c->func->ch.op_codes.count;
 
         expression(c);
+        c->first_expr = false;
         emit_byte(c, OP_POP);
         consume(TOKEN_CH_RPAREN, "Expect `)` after 'for' statement.", &c->parser);
 
@@ -564,6 +566,7 @@ static void while_statement(Compiler *c)
 
     consume(TOKEN_CH_LPAREN, "Expect `(` after 'while'.", &c->parser);
     expression(c);
+    c->first_expr = false;
     consume(TOKEN_CH_RPAREN, "Expect `)` after 'while' condition.", &c->parser);
 
     int exit_jmp = emit_jump(c, OP_JMPF);
@@ -628,12 +631,14 @@ static void consume_if(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after an 'if'.", &c->parser);
     expression(c);
+    c->first_expr = false;
     consume(TOKEN_CH_RPAREN, "Expect `)` after an 'if' condtion.", &c->parser);
 }
 static void consume_elif(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after an 'elif'.", &c->parser);
     expression(c);
+    c->first_expr = false;
     consume(TOKEN_CH_RPAREN, "Expect `)` after an 'elif' condtion.", &c->parser);
 }
 
@@ -766,6 +771,7 @@ static void return_statement(Compiler *c)
         if (c->type == INIT)
             error("ERROR: Unable to return value from initializer.", &c->parser);
         expression(c);
+        c->first_expr = false;
         consume(TOKEN_CH_SEMI, "ERROR: Expect semi colon after return statement.", &c->parser);
         emit_byte(c, OP_RETURN);
     }
@@ -829,6 +835,7 @@ static int emit_jump(Compiler *c, int byte)
 static void default_expression(Compiler *c)
 {
     expression(c);
+    c->first_expr = false;
     consume(TOKEN_CH_SEMI, "Expect `;` after expression.", &c->parser);
     emit_byte(c, OP_POP);
 }
@@ -845,6 +852,7 @@ static void print_statement(Compiler *c)
             null_coalescing_statement(c);
         if (check(TOKEN_CH_COMMA, &c->parser))
             emit_byte(c, OP_PRINT);
+        c->first_expr = false;
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
     emit_byte(c, OP_PRINT);
@@ -1094,11 +1102,11 @@ static void pi(Compiler *c)
     emit_constant(c, Double(M_PI));
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 
 static void euler(Compiler *c)
@@ -1106,11 +1114,11 @@ static void euler(Compiler *c)
     emit_constant(c, Double(M_E));
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 
 static void dval(Compiler *c)
@@ -1120,11 +1128,11 @@ static void dval(Compiler *c)
 
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 static void ival(Compiler *c)
 {
@@ -1132,11 +1140,11 @@ static void ival(Compiler *c)
     emit_constant(c, Int(atoi(c->parser.pre.start)));
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 static void llint(Compiler *c)
 {
@@ -1144,11 +1152,11 @@ static void llint(Compiler *c)
 
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 static void ch(Compiler *c)
 {
@@ -1156,11 +1164,11 @@ static void ch(Compiler *c)
 
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 
 static void boolean(Compiler *c)
@@ -1171,11 +1179,11 @@ static void boolean(Compiler *c)
         emit_constant(c, Bool(*c->parser.pre.start == 't' ? true : false));
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 static const char *parse_string(Compiler *c)
 {
@@ -1190,11 +1198,11 @@ static void cstr(Compiler *c)
 
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 static void string(Compiler *c)
 {
@@ -1205,11 +1213,11 @@ static void string(Compiler *c)
 
     if (!c->first_expr)
     {
-        emit_byte(c, OP_MOV_R1);
+        emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
     else
-        emit_byte(c, OP_MOV_R2);
+        emit_byte(c, OP_MOV_PEEK_R2);
 }
 
 static void array_alloc(Compiler *c)
@@ -1251,7 +1259,7 @@ static void vector_alloc(Compiler *c)
         error("ERROR: Invalid expression inside of vector allocation", &c->parser);
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after vector allocation.", &c->parser);
-    emit_byte(c, OP_MOV_E2);
+    emit_byte(c, OP_MOV_PEEK_E2);
     c->element = true;
 }
 
@@ -1277,7 +1285,7 @@ static void stack_alloc(Compiler *c)
         error("ERROR: Invalid expression inside of Stack allocation", &c->parser);
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after Stack allocation", &c->parser);
-    emit_byte(c, OP_MOV_E2);
+    emit_byte(c, OP_MOV_PEEK_E2);
 }
 
 static void table(Compiler *c)
@@ -1387,15 +1395,11 @@ static Arena get_id(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
-        emit_byte(c, el.type == ARENA ? OP_STR_R1 : OP_STR_E2);
         emit_3_bytes(c, set, arg);
     }
     else
     {
         emit_bytes(c, get, arg);
-        Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
-        emit_byte(c, el.type == ARENA ? OP_MOV_PEEK_R2 : OP_MOV_PEEK_E2);
 
         if (check(TOKEN_CH_DOT, &c->parser))
             c->array_set = set,
@@ -1639,14 +1643,12 @@ static void dot(Compiler *c)
         emit_bytes(c, OP_OR, OP_STR_R1);
         emit_byte(c, OP_MOV_R1_E1);
 
-        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else
     {
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
-        // emit_byte(c, OP_MOV_E2);
     }
 
     c->first_expr = false;
@@ -1774,10 +1776,7 @@ static void _access(Compiler *c)
         emit_byte(c, OP_SET_ACCESS);
     }
     else
-    {
-        // emit_byte(c, OP_MOV_R2_R1);
         emit_byte(c, OP_GET_ACCESS);
-    }
 }
 
 static void _this(Compiler *c)

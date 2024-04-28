@@ -206,6 +206,63 @@ int disassemble_instruction(Chunk *c, int offset)
     case OP_SET_PROP:
         return byte_instruction("OP_SET_PROP", c, offset);
 
+    case OP_MOV_PEEK_R1:
+        return byte_instruction("OP_MOV_PEEK_R1", c, offset);
+    case OP_MOV_PEEK_R2:
+        return byte_instruction("OP_MOV_PEEK_R2", c, offset);
+    case OP_MOV_PEEK_R3:
+        return byte_instruction("OP_MOV_PEEK_R3", c, offset);
+    case OP_MOV_R1:
+        return byte_instruction("OP_MOV_R1", c, offset);
+    case OP_MOV_R2:
+        return byte_instruction("OP_MOV_R2", c, offset);
+    case OP_MOV_R3:
+        return byte_instruction("OP_MOV_R3", c, offset);
+    case OP_MOV_R1_R2:
+        return byte_instruction("OP_MOV_R1_R2", c, offset);
+    case OP_MOV_R1_R3:
+        return byte_instruction("OP_MOV_R1_R3", c, offset);
+    case OP_MOV_R2_R1:
+        return byte_instruction("OP_MOV_R2_R1", c, offset);
+    case OP_MOV_R3_R1:
+        return byte_instruction("OP_MOV_R3_R1", c, offset);
+    case OP_MOV_R3_R2:
+        return byte_instruction("OP_MOV_R3_R2", c, offset);
+        break;
+    case OP_MOV_R1_R4:
+        return byte_instruction("OP_MOV_R1_R4", c, offset);
+    case OP_MOV_R1_E2:
+        return byte_instruction("OP_MOV_R1_E2", c, offset);
+    case OP_MOV_R1_E1:
+        return byte_instruction("OP_MOV_R1_E1", c, offset);
+    case OP_MOV_R2_E1:
+        return byte_instruction("OP_MOV_R2_E1", c, offset);
+    case OP_MOV_R2_E2:
+        return byte_instruction("OP_MOV_R2_E2", c, offset);
+    case OP_MOV_E2_E1:
+        return byte_instruction("OP_MOV_E2_E1", c, offset);
+    case OP_MOV_E2_E3:
+        return byte_instruction("OP_MOV_E2_E3", c, offset);
+    case OP_MOV_E3_E2:
+        return byte_instruction("OP_MOV_E3_E2", c, offset);
+    case OP_ZERO_E1:
+        return byte_instruction("OP_ZERO_E1", c, offset);
+    case OP_ZERO_E2:
+        return byte_instruction("OP_ZERO_E2", c, offset);
+    case OP_MOV_E1_E2:
+        return byte_instruction("OP_MOV_E1_E2", c, offset);
+    case OP_MOV_E1_E3:
+        return byte_instruction("OP_MOV_E1_E3", c, offset);
+    case OP_MOV_E1:
+        return byte_instruction("OP_MOV_E1", c, offset);
+    case OP_MOV_E2:
+        return byte_instruction("OP_MOV_E2", c, offset);
+    case OP_MOV_E3:
+        return byte_instruction("OP_MOV_E3", c, offset);
+    case OP_MOV_PEEK_E1:
+        return byte_instruction("OP_MOV_PEEK_E1", c, offset);
+    case OP_MOV_PEEK_E2:
+        return byte_instruction("OP_MOV_PEEK_E2", c, offset);
     default:
         printf("Unkown opcode: %d\n", offset);
         return ++offset;

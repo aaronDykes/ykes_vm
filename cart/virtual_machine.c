@@ -539,7 +539,7 @@ Interpretation run(void)
             PUSH(OBJ((machine.r1 = _sub(machine.r1, machine.r2))));
             break;
         case OP_MUL:
-            PUSH(OBJ((machine.r1 = _mul(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _mul(machine.r2, machine.r1))));
             break;
         case OP_MOD:
             PUSH(OBJ((machine.r1 = _mod(machine.r1, machine.r2))));
@@ -554,10 +554,10 @@ Interpretation run(void)
             PUSH(OBJ((machine.r1 = _ne(machine.r1, machine.r2))));
             break;
         case OP_SEQ:
-            PUSH(OBJ((machine.r1 = _seq(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _seq(machine.r2, machine.r1))));
             break;
         case OP_SNE:
-            PUSH(OBJ((machine.r1 = _sne(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _sne(machine.r2, machine.r1))));
             break;
         case OP_LT:
             PUSH(OBJ((machine.r1 = _lt(machine.r1, machine.r2))));
@@ -575,7 +575,7 @@ Interpretation run(void)
             PUSH(OBJ((machine.r1 = _or(machine.r1, machine.r2))));
             break;
         case OP_AND:
-            PUSH(OBJ((machine.r1 = _and(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _and(machine.r2, machine.r1))));
             break;
         case OP_GET_ACCESS:
         {
