@@ -1400,10 +1400,7 @@ static Arena get_id(Compiler *c)
     {
         emit_bytes(c, get, arg);
         Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
-        if (get == OP_GET_LOCAL)
-            emit_byte(c, el.type == ARENA ? OP_MOV_PEEK_R2 : OP_MOV_PEEK_E2);
-        else
-            emit_byte(c, el.type == ARENA ? OP_MOV_R2 : OP_MOV_E2);
+        emit_byte(c, el.type == ARENA ? OP_MOV_PEEK_R2 : OP_MOV_PEEK_E2);
 
         if (check(TOKEN_CH_DOT, &c->parser))
             c->array_set = set,
@@ -1912,10 +1909,7 @@ static void id(Compiler *c)
     {
         emit_3_bytes(c, get, arg);
         Element el = c->func->ch.constants[c->func->ch.constants->count - 1].as;
-        if (get == OP_GET_LOCAL)
-            emit_byte(c, el.type == ARENA ? OP_MOV_PEEK_R2 : OP_MOV_PEEK_E2);
-        else
-            emit_byte(c, el.type == ARENA ? OP_MOV_R2 : OP_MOV_E2);
+        emit_byte(c, el.type == ARENA ? OP_MOV_PEEK_R2 : OP_MOV_PEEK_E2);
 
         if (check(TOKEN_CH_DOT, &c->parser))
             c->array_set = set,
