@@ -754,6 +754,8 @@ Interpretation run(void)
 
             if (el.type == ARENA)
                 machine.r2 = el.arena;
+            else
+                machine.e1 = el;
 
             break;
         }
