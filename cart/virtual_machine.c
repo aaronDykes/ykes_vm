@@ -810,6 +810,15 @@ Interpretation run(void)
             print_line(POP());
             break;
 
+        case OP_MOV_PEEK_R1:
+            machine.r1 = PEEK().arena;
+            break;
+        case OP_MOV_PEEK_R2:
+            machine.r2 = PEEK().arena;
+            break;
+        case OP_MOV_PEEK_R3:
+            machine.r3 = PEEK().arena;
+            break;
         case OP_MOV_R1:
             machine.r1 = POP().arena;
             break;
@@ -821,6 +830,12 @@ Interpretation run(void)
             break;
         case OP_ZERO_ACC:
             machine.r1 = Int(0);
+            break;
+        case OP_MOV_PEEK_E1:
+            machine.e1 = PEEK();
+            break;
+        case OP_MOV_PEEK_E2:
+            machine.e2 = PEEK();
             break;
         case OP_MOV_E1:
             machine.e1 = POP();

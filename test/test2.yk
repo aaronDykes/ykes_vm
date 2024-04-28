@@ -10,9 +10,13 @@ sr fuck_shit()
     
     hello += (5 * 10);
 
-    // hello=hello+5;
+    hello=hello+5;
 
-    pout(hello);
+
+
+    var bo = (hello == 1060);
+
+    pout(hello, bo);
 
 }
 
