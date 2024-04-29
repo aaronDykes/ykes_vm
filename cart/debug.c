@@ -199,6 +199,8 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_CALL", c, offset);
     case OP_PRINT:
         return simple_instruction("OP_PRINT", offset);
+    case OP_PRINT_LOCAL:
+        return simple_instruction("OP_PRINT_LOCAL", offset);
     case OP_RETURN:
         return simple_instruction("OP_RETURN", offset);
     case OP_GET_PROP:
@@ -218,6 +220,12 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_MOV_R2", c, offset);
     case OP_MOV_R3:
         return byte_instruction("OP_MOV_R3", c, offset);
+    case OP_MOV_CNT_R1:
+        return byte_instruction("OP_MOV_CNT_R1", c, offset);
+    case OP_MOV_CNT_R2:
+        return byte_instruction("OP_MOV_CNT_R2", c, offset);
+    case OP_MOV_CNT_R3:
+        return byte_instruction("OP_MOV_CNT_R3", c, offset);
     case OP_MOV_R1_R2:
         return byte_instruction("OP_MOV_R1_R2", c, offset);
     case OP_MOV_R1_R3:
@@ -259,6 +267,13 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_MOV_E2", c, offset);
     case OP_MOV_E3:
         return byte_instruction("OP_MOV_E3", c, offset);
+
+    case OP_MOV_CNT_E1:
+        return byte_instruction("OP_MOV_CNT_E1", c, offset);
+    case OP_MOV_CNT_E2:
+        return byte_instruction("OP_MOV_CNT_E2", c, offset);
+    case OP_MOV_CNT_E3:
+        return byte_instruction("OP_MOV_CNT_E3", c, offset);
     case OP_MOV_PEEK_E1:
         return byte_instruction("OP_MOV_PEEK_E1", c, offset);
     case OP_MOV_PEEK_E2:

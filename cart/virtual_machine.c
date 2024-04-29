@@ -442,8 +442,8 @@ Interpretation run(void)
 #define FIND_PARAM(ar) (find(frame->closure->func->params, ar))
 #define WRITE_GLOB(a, b) (write_table(machine.glob, a, b))
 #define WRITE_PARAM(a, b) (write_table(frame->closure->func->params, a, b))
-#define RM() \
-    free_asterisk(machine.e1)
+#define RM(ad) \
+    free_asterisk(ad)
 #define POP() \
     (--machine.stack->count, (--machine.stack->top)->as)
 #define CPOP() \
@@ -493,7 +493,7 @@ Interpretation run(void)
             Element key = READ_CONSTANT();
             Element ar = OBJ(_inc(FIND_GLOB(key.arena).arena));
             WRITE_GLOB(key.arena, ar);
-            PUSH(ar);
+            machine.r1 = ar.arena;
             break;
         }
         case OP_DEC_GLO:
@@ -501,7 +501,7 @@ Interpretation run(void)
             Element key = READ_CONSTANT();
             Element ar = OBJ(_dec(FIND_GLOB(key.arena).arena));
             WRITE_GLOB(key.arena, ar);
-            PUSH(ar);
+            machine.r1 = ar.arena;
             break;
         }
         case OP_INC_LOC:
@@ -509,7 +509,8 @@ Interpretation run(void)
             uint8_t index = READ_SHORT();
             Element el = OBJ(_inc((frame->slots + index)->as.arena));
             (frame->slots + index)->as = el;
-            PUSH(el);
+            machine.r1 = el.arena;
+            PUSH(OBJ(machine.r1));
             break;
         }
         case OP_DEC_LOC:
@@ -517,7 +518,8 @@ Interpretation run(void)
             uint8_t index = READ_SHORT();
             Element el = OBJ(_dec((frame->slots + index)->as.arena));
             (frame->slots + index)->as = el;
-            PUSH(el);
+            machine.r1 = el.arena;
+            PUSH(OBJ(machine.r1));
             break;
         }
         case OP_INC:
@@ -533,71 +535,73 @@ Interpretation run(void)
             POP();
             break;
         case OP_ADD:
-            PUSH(OBJ((machine.r1 = _add(POP().arena, POP().arena))));
+            machine.r1 = _add(machine.r1, machine.r2);
             break;
         case OP_SUB:
-            PUSH(OBJ((machine.r1 = _sub(POP().arena, POP().arena))));
+            machine.r1 = _sub(machine.r1, machine.r2);
             break;
         case OP_MUL:
-            PUSH(OBJ((machine.r1 = _mul(POP().arena, POP().arena))));
+            machine.r1 = _mul(machine.r1, machine.r2);
             break;
         case OP_MOD:
-            PUSH(OBJ((machine.r1 = _mod(POP().arena, POP().arena))));
+            machine.r1 = _mod(machine.r1, machine.r2);
             break;
         case OP_DIV:
-            PUSH(OBJ((machine.r1 = _div(POP().arena, POP().arena))));
+            machine.r1 = _div(machine.r1, machine.r2);
             break;
         case OP_EQ:
-            PUSH(OBJ((machine.r1 = _eq(POP().arena, POP().arena))));
+            machine.r1 = _eq(machine.r1, machine.r2);
             break;
         case OP_NE:
-            PUSH(OBJ((machine.r1 = _ne(POP().arena, POP().arena))));
+            machine.r1 = _ne(machine.r1, machine.r2);
             break;
         case OP_SEQ:
-            PUSH(OBJ((machine.r1 = _seq(POP().arena, POP().arena))));
+            machine.r1 = _seq(machine.r1, machine.r2);
             break;
         case OP_SNE:
-            PUSH(OBJ((machine.r1 = _sne(POP().arena, POP().arena))));
+            machine.r1 = _sne(machine.r1, machine.r2);
             break;
         case OP_LT:
-            PUSH(OBJ((machine.r1 = _lt(POP().arena, POP().arena))));
+            machine.r1 = _lt(machine.r1, machine.r2);
             break;
         case OP_LE:
-            PUSH(OBJ((machine.r1 = _le(POP().arena, POP().arena))));
+            machine.r1 = _le(machine.r1, machine.r2);
             break;
         case OP_GT:
-            PUSH(OBJ((machine.r1 = _gt(POP().arena, POP().arena))));
+            machine.r1 = _gt(machine.r1, machine.r2);
             break;
         case OP_GE:
-            PUSH(OBJ((machine.r1 = _ge(POP().arena, POP().arena))));
+            machine.r1 = _ge(machine.r1, machine.r2);
             break;
         case OP_OR:
-            PUSH(OBJ((machine.r1 = _or(POP().arena, POP().arena))));
+            machine.r1 = _or(machine.r1, machine.r2);
             break;
         case OP_AND:
-            PUSH(OBJ((machine.r1 = _and(POP().arena, POP().arena))));
+            machine.r1 = _and(machine.r1, machine.r2);
             break;
         case OP_GET_ACCESS:
         {
 
-            // Element el = _get_access(machine.r1, machine.e3);
-            Element el = _get_access(POP().arena, POP());
+            Element el = _get_access(machine.r1, machine.e3);
 
-            if (el.type != NULL_OBJ)
-            {
-                PUSH(el);
-                break;
-            }
-            return INTERPRET_RUNTIME_ERR;
+            if (el.type == NULL_OBJ)
+                return INTERPRET_RUNTIME_ERR;
+
+            if (el.type != ARENA)
+                machine.e1 = el;
+            else
+                machine.r1 = el.arena;
+
+            break;
         }
         case OP_SET_ACCESS:
 
-            // if (machine.e1.type == NULL_OBJ)
-            // machine.e1 = OBJ(machine.r1);
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
 
-            _set_access(POP(), machine.r4, machine.e3);
-            // _set_access(POP(), POP().arena, POP());
+            _set_access(machine.e1, machine.r4, machine.e3);
             break;
+
         case OP_RESET_ARGC:
             machine.cargc = 0;
             machine.argc = 0;
@@ -637,7 +641,7 @@ Interpretation run(void)
         // PUSH(machine.pop_val);
         // break;
         case OP_CPY_ARRAY:
-            machine.e2 = cpy_array(machine.e1);
+            machine.e1 = cpy_array(machine.e1);
             break;
         case OP_LEN:
             machine.r1 = _len(machine.e1);
@@ -669,14 +673,14 @@ Interpretation run(void)
             break;
         case OP_SET_PROP:
         {
-            // Element el = machine.e1;
+            Element el = machine.e1;
             // Element inst = machine.e2;
             if (machine.e2.type != INSTANCE)
             {
                 runtime_error("ERROR: Can only set properties of an instance.");
                 return INTERPRET_RUNTIME_ERR;
             }
-            write_table(machine.e2.instance->classc->fields, READ_CONSTANT().arena, machine.e1);
+            write_table(machine.e2.instance->classc->fields, READ_CONSTANT().arena, POP());
             // POP();
             break;
         }
@@ -687,6 +691,7 @@ Interpretation run(void)
                 runtime_error("ERROR: Only instances contain properties.");
                 return INTERPRET_RUNTIME_ERR;
             }
+            // POP();
             // Instance *inst = POP().instance;
             Arena name = READ_CONSTANT().arena;
 
@@ -707,6 +712,7 @@ Interpretation run(void)
             if (!call_value(machine.e2, argc))
                 return INTERPRET_RUNTIME_ERR;
 
+            machine.e2 = null_obj();
             frame = (machine.frames + (machine.frame_count - 1));
             machine.argc = (argc == 0) ? 1 : argc;
             machine.cargc = 1;
@@ -748,17 +754,23 @@ Interpretation run(void)
 
             PUSH(el);
 
-            if (el.type == ARENA)
-                machine.r2 = el.arena;
-            else
+            if (el.type != ARENA)
                 machine.e1 = el;
+            else
+                machine.r2 = el.arena;
 
             break;
         }
 
         case OP_SET_LOCAL:
-            LOCAL() = PEEK();
+        {
+
+            if (machine.e2.type == NULL_OBJ)
+                machine.e2 = OBJ(machine.r1);
+
+            LOCAL() = machine.e2;
             break;
+        }
 
         case OP_SET_LOCAL_PARAM:
             LOCAL() = (machine.cargc < machine.argc)
@@ -778,7 +790,9 @@ Interpretation run(void)
             machine.e2 = (machine.class_stack + READ_SHORT())->as;
             break;
         case OP_RM:
-            RM();
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+            RM(machine.e1);
             break;
         case OP_ALLOC_TABLE:
             if (machine.r1.type != ARENA_INT)
@@ -786,7 +800,7 @@ Interpretation run(void)
                 runtime_error("ERROR: Table argument must be a numeric value.");
                 return INTERPRET_RUNTIME_ERR;
             }
-            PUSH((machine.e2 = TABLE(GROW_TABLE(NULL, machine.r1.as.Int))));
+            machine.e2 = TABLE(GROW_TABLE(NULL, machine.r1.as.Int));
             break;
         case OP_GET_GLOBAL:
         {
@@ -794,17 +808,18 @@ Interpretation run(void)
             Arena var = READ_CONSTANT().arena;
             Element el = FIND_GLOB(var);
 
-            if (el.type == ARENA_NULL)
+            if (el.type == NULL_OBJ)
             {
                 runtime_error("ERROR: Undefined global value '%s'.", var.as.String);
                 return INTERPRET_RUNTIME_ERR;
             }
 
-            PUSH(el);
+            // PUSH(el);
 
             if (el.type == ARENA)
                 machine.r2 = el.arena;
             else
+
                 machine.e1 = el;
 
             break;
@@ -814,11 +829,14 @@ Interpretation run(void)
         case OP_GLOBAL_DEF:
         {
             Element el = READ_CONSTANT();
-            Element res = POP();
+            if (machine.e2.type == NULL_OBJ)
+                machine.e2 = OBJ(machine.r1);
 
-            if (res.type == CLOSURE)
-                res.closure->func->name = el.arena;
-            WRITE_GLOB(el.arena, res);
+            // Element res = POP();
+
+            if (machine.e2.type == CLOSURE)
+                machine.e2.closure->func->name = el.arena;
+            WRITE_GLOB(el.arena, machine.e2);
         }
         break;
         case OP_SET_FUNC_VAR:
@@ -835,7 +853,9 @@ Interpretation run(void)
         break;
 
         case OP_PRINT:
-            print_line(POP());
+            if (machine.e2.type == NULL_OBJ)
+                machine.e2 = OBJ(machine.r1);
+            print_line(machine.e2);
             break;
 
         case OP_MOV_PEEK_R1:
@@ -856,6 +876,15 @@ Interpretation run(void)
         case OP_MOV_R3:
             machine.r3 = POP().arena;
             break;
+        case OP_MOV_CNT_R1:
+            machine.r1 = READ_CONSTANT().arena;
+            break;
+        case OP_MOV_CNT_R2:
+            machine.r2 = READ_CONSTANT().arena;
+            break;
+        case OP_MOV_CNT_R3:
+            machine.r3 = READ_CONSTANT().arena;
+            break;
 
         case OP_MOV_PEEK_E1:
             machine.e1 = PEEK();
@@ -871,6 +900,15 @@ Interpretation run(void)
             break;
         case OP_MOV_E3:
             machine.e3 = POP();
+            break;
+        case OP_MOV_CNT_E1:
+            machine.e1 = READ_CONSTANT();
+            break;
+        case OP_MOV_CNT_E2:
+            machine.e2 = READ_CONSTANT();
+            break;
+        case OP_MOV_CNT_E3:
+            machine.e3 = READ_CONSTANT();
             break;
 
         case OP_MOV_R1_R2:
@@ -915,7 +953,6 @@ Interpretation run(void)
         case OP_MOV_E3_E2:
             machine.e2 = machine.e3;
             break;
-
         case OP_MOV_E1_E2:
             machine.e2 = machine.e1;
             break;
@@ -954,10 +991,10 @@ Interpretation run(void)
                 POP();
                 return INTERPRET_SUCCESS;
             }
-            for (Stack *s = machine.stack; s < machine.stack->top; s++)
-                POP();
 
             machine.stack->top = frame->slots;
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
             PUSH(el);
 
             frame = &machine.frames[machine.frame_count - 1];

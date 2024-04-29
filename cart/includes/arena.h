@@ -34,6 +34,7 @@ typedef enum
     OP_CONSTANT,
     OP_CLOSURE,
     OP_PRINT,
+    OP_PRINT_LOCAL,
 
     OP_CLASS,
     OP_GET_INSTANCE,
@@ -138,6 +139,9 @@ typedef enum
     OP_MOV_R1,
     OP_MOV_R2,
     OP_MOV_R3,
+    OP_MOV_CNT_R1,
+    OP_MOV_CNT_R2,
+    OP_MOV_CNT_R3,
 
     OP_MOV_R1_R2,
     OP_MOV_R1_R3,
@@ -165,6 +169,9 @@ typedef enum
     OP_MOV_E1,
     OP_MOV_E2,
     OP_MOV_E3,
+    OP_MOV_CNT_E1,
+    OP_MOV_CNT_E2,
+    OP_MOV_CNT_E3,
     OP_MOV_PEEK_E1,
     OP_MOV_PEEK_E2,
 
