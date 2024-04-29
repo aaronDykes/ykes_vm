@@ -1,10 +1,9 @@
-sr Fizzbang()
-{
+
     var str;
     for (var i = 1; i < 1000; ++i)
         if ((i % 15) == 0)
         {
-            str = "FIZZBANG: " + i;
+             str = "FIZZBANG: " + i;
             pout(str);
             rm(str);
         }
@@ -24,7 +23,3 @@ sr Fizzbang()
         }
         else 
             pout(i); 
-}
-        
-
-Fizzbang();
