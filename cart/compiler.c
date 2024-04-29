@@ -734,6 +734,7 @@ static void elif_statement(Compiler *c)
             BIG_NIB(c->func->ch.cases.count),
             LIL_NIB(c->func->ch.cases.count));
         patch_jump_long(c, begin, tr);
+        // emit_byte(c, OP_POP);
     }
 }
 

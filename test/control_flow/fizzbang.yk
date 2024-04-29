@@ -1,6 +1,9 @@
+sr fizz()
+{
+
 
     var str;
-    for (var i = 1; i < 1000; ++i)
+    for (var i = 1; i < 100; ++i)
         if ((i % 15) == 0)
         {
              str = "FIZZBANG: " + i;
@@ -23,3 +26,6 @@
         }
         else 
             pout(i); 
+}
+
+fizz();

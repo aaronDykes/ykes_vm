@@ -657,7 +657,7 @@ Interpretation run(void)
 
             if (FALSEY())
             {
-                // POP();
+                POP();
                 frame->ip += jump;
                 break;
             }
