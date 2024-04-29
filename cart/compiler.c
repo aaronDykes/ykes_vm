@@ -37,7 +37,6 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
     a->func = NULL;
     a->func = function(name);
     a->type = type;
-    a->element = false;
     // a->parser.current_file = b->base->current_file;
 
     if (b)
@@ -732,8 +731,8 @@ static void elif_statement(Compiler *c)
         emit_byte(c, OP_JMPL);
         emit_bytes(
             c,
-            (c->func->ch.cases.count >> 8) & 0xFF,
-            (c->func->ch.cases.count & 0xFF));
+            BIG_NIB(c->func->ch.cases.count),
+            LIL_NIB(c->func->ch.cases.count));
         patch_jump_long(c, begin, tr);
     }
 }
@@ -1198,6 +1197,7 @@ static void cstr(Compiler *c)
 
     if (!c->first_expr)
     {
+
         emit_byte(c, OP_MOV_PEEK_R1);
         c->first_expr = true;
     }
@@ -1260,7 +1260,6 @@ static void vector_alloc(Compiler *c)
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after vector allocation.", &c->parser);
     emit_byte(c, OP_MOV_PEEK_E2);
-    c->element = true;
 }
 
 static void stack_alloc(Compiler *c)
@@ -1305,7 +1304,6 @@ static void table(Compiler *c)
         emit_byte(c, OP_ALLOC_TABLE);
         consume(TOKEN_CH_RPAREN, "Expect `)` after Table declaration", &c->parser);
     }
-    // c->element = true;
     emit_byte(c, OP_MOV_PEEK_E2);
 }
 
@@ -1830,6 +1828,7 @@ static void id(Compiler *c)
 
     if (arg != -1)
     {
+
         get = OP_GET_LOCAL;
         set = OP_SET_LOCAL;
     }
@@ -1856,6 +1855,7 @@ static void id(Compiler *c)
         emit_3_bytes(c, get == OP_GET_LOCAL ? OP_INC_LOC : OP_INC_GLO, arg);
     else if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
+        c->first_expr = false;
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -1976,7 +1976,6 @@ static void id(Compiler *c)
             c->array_index = arg;
     }
     c->first_expr = false;
-    c->element = false;
 }
 
 static int parse_var(Compiler *c, Arena ar)

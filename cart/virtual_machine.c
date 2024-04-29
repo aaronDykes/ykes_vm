@@ -533,46 +533,46 @@ Interpretation run(void)
             POP();
             break;
         case OP_ADD:
-            PUSH(OBJ((machine.r1 = _add(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _add(POP().arena, POP().arena))));
             break;
         case OP_SUB:
-            PUSH(OBJ((machine.r1 = _sub(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _sub(POP().arena, POP().arena))));
             break;
         case OP_MUL:
-            PUSH(OBJ((machine.r1 = _mul(machine.r2, machine.r1))));
+            PUSH(OBJ((machine.r1 = _mul(POP().arena, POP().arena))));
             break;
         case OP_MOD:
-            PUSH(OBJ((machine.r1 = _mod(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _mod(POP().arena, POP().arena))));
             break;
         case OP_DIV:
-            PUSH(OBJ((machine.r1 = _div(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _div(POP().arena, POP().arena))));
             break;
         case OP_EQ:
-            PUSH(OBJ((machine.r1 = _eq(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _eq(POP().arena, POP().arena))));
             break;
         case OP_NE:
-            PUSH(OBJ((machine.r1 = _ne(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _ne(POP().arena, POP().arena))));
             break;
         case OP_SEQ:
-            PUSH(OBJ((machine.r1 = _seq(machine.r2, machine.r1))));
+            PUSH(OBJ((machine.r1 = _seq(POP().arena, POP().arena))));
             break;
         case OP_SNE:
-            PUSH(OBJ((machine.r1 = _sne(machine.r2, machine.r1))));
+            PUSH(OBJ((machine.r1 = _sne(POP().arena, POP().arena))));
             break;
         case OP_LT:
-            PUSH(OBJ((machine.r1 = _lt(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _lt(POP().arena, POP().arena))));
             break;
         case OP_LE:
-            PUSH(OBJ((machine.r1 = _le(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _le(POP().arena, POP().arena))));
             break;
         case OP_GT:
-            PUSH(OBJ((machine.r1 = _gt(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _gt(POP().arena, POP().arena))));
             break;
         case OP_GE:
-            PUSH(OBJ((machine.r1 = _ge(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _ge(POP().arena, POP().arena))));
             break;
         case OP_OR:
-            PUSH(OBJ((machine.r1 = _or(machine.r1, machine.r2))));
+            PUSH(OBJ((machine.r1 = _or(POP().arena, POP().arena))));
             break;
         case OP_AND:
             PUSH(OBJ((machine.r1 = _and(machine.r2, machine.r1))));
@@ -743,7 +743,6 @@ Interpretation run(void)
             break;
         case OP_CLOSE_UPVAL:
             close_upvalues(machine.stack->top - 1);
-            // POP();
             break;
         case OP_GET_LOCAL:
         {
@@ -759,6 +758,7 @@ Interpretation run(void)
 
             break;
         }
+
         case OP_SET_LOCAL:
             LOCAL() = PEEK();
             break;

@@ -71,7 +71,7 @@ struct Compiler
     int class_count;
     int native_count;
     bool first_expr;
-    bool element;
+    bool variable_dec;
 
     // const char *src;
     uint8_t array_index;
