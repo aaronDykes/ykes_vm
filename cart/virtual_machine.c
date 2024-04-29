@@ -575,7 +575,7 @@ Interpretation run(void)
             PUSH(OBJ((machine.r1 = _or(POP().arena, POP().arena))));
             break;
         case OP_AND:
-            PUSH(OBJ((machine.r1 = _and(machine.r2, machine.r1))));
+            PUSH(OBJ((machine.r1 = _and(POP().arena, POP().arena))));
             break;
         case OP_GET_ACCESS:
         {

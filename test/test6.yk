@@ -1,6 +1,6 @@
-import "functions/fizzbang.yk";
-import "test1.yk";
-import "functions/nest.yk";
+// import "functions/fizzbang.yk";
+// import "test1.yk";
+// import "functions/nest.yk";
 import "oop/Zoo.yk";
 import "functions/prime.yk";
 import "oop/CoffeeMaker.yk";
