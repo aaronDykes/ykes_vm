@@ -1,4 +1,4 @@
-// import "functions/fizzbang.yk";
+import "functions/fizzbang.yk";
 // import "test1.yk";
 // import "functions/nest.yk";
 import "oop/Zoo.yk";
@@ -11,7 +11,7 @@ import "test3.yk";
 
 
 // var p = Prime();
-var fb = Fizzbang();
+// var fb = Fizzbang();
 // var nt = Nest(69, 69, 420);
 // var tab = Tables();
 // var scone = Scone();
@@ -26,7 +26,7 @@ var fb = Fizzbang();
 // b.file_read_write();
 
 // p.res();
-fb.fb();
+// fb.fb();
 // fib.res();
 // scone.topping("strawberries ", "cream", 69); 
 // pout(nt.sum());

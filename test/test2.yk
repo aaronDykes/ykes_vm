@@ -2,32 +2,34 @@
 
 
 
-sr fuck_shit()
+
+
+sr maf()
 {
 
     var hello=(10*10*10)+5;
 
-    
     hello += (5 * 10);
 
     hello=hello+5;
 
     hello++;
 
-    var bo = (hello == 1061);
+    var bo = hello != 1061;
+
 
     pout(hello, bo);
 
 }
+maf();
 
-sr another()
-{
-    var ok=fuck_shit;
-    ok();
-}
+// sr another()
+// {
+//     var ok=fuck_shit;
+//     ok();
+// }
 
 
-another();
 
 
 

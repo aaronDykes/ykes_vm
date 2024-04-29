@@ -1,5 +1,7 @@
-sr f()
+sr fun()
 {
+
+
     var tab = Table();
 
     var nest = Table();
@@ -31,8 +33,9 @@ sr f()
 
 }
 
+fun();
 
-f();
+
 
 
 
