@@ -15,7 +15,7 @@ sr maf()
 
     hello++;
 
-    var bo = hello != 1061;
+    var bo = hello == 1061;
 
 
     pout(hello, bo);
