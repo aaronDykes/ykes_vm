@@ -14,8 +14,6 @@ sr fuck_shit()
 
     hello++;
 
-
-
     var bo = (hello == 1061);
 
     pout(hello, bo);

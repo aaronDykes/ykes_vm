@@ -580,13 +580,8 @@ Interpretation run(void)
         case OP_GET_ACCESS:
         {
 
-            Element el = _get_access(machine.r1, machine.e3);
-
-            if (el.type != ARENA)
-                machine.e1 = el;
-
-            else
-                machine.r1 = el.arena;
+            // Element el = _get_access(machine.r1, machine.e3);
+            Element el = _get_access(POP().arena, POP());
 
             if (el.type != NULL_OBJ)
             {
@@ -597,12 +592,11 @@ Interpretation run(void)
         }
         case OP_SET_ACCESS:
 
-            if (machine.e1.type == NULL_OBJ)
-                machine.e1 = OBJ(machine.r1);
-            // else
-            // machine.e1 = machine.e2;
+            // if (machine.e1.type == NULL_OBJ)
+            // machine.e1 = OBJ(machine.r1);
 
-            _set_access(machine.e1, machine.r4, machine.e3);
+            _set_access(POP(), machine.r4, machine.e3);
+            // _set_access(POP(), POP().arena, POP());
             break;
         case OP_RESET_ARGC:
             machine.cargc = 0;
@@ -616,11 +610,14 @@ Interpretation run(void)
         case OP_PUSH_ARRAY_VAL:
         {
 
-            Element res = _push_array_val(machine.e1, machine.e2);
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+
+            Element res = _push_array_val(machine.e1, machine.e3);
+
             if (res.type != NULL_OBJ)
             {
-                machine.e2 = res;
-                // machine.r1 = Bool(machine.e2.type == VECTOR || machine.e2.type == STACK);
+                machine.e3 = res;
                 break;
             }
             return INTERPRET_RUNTIME_ERR;
@@ -797,18 +794,20 @@ Interpretation run(void)
             Arena var = READ_CONSTANT().arena;
             Element el = FIND_GLOB(var);
 
-            // if (el.type != ARENA_NULL)
-            // {
+            if (el.type == ARENA_NULL)
+            {
+                runtime_error("ERROR: Undefined global value '%s'.", var.as.String);
+                return INTERPRET_RUNTIME_ERR;
+            }
+
             PUSH(el);
+
             if (el.type == ARENA)
                 machine.r2 = el.arena;
             else
                 machine.e1 = el;
-            break;
-            // }
 
-            // runtime_error("ERROR: Undefined property '%s'.", var.as.String);
-            // return INTERPRET_RUNTIME_ERR;
+            break;
         }
 
         case OP_SET_GLOBAL:
