@@ -82,10 +82,14 @@ int disassemble_instruction(Chunk *c, int offset)
         return simple_instruction("OP_POP__ARRAY_VAL", offset);
     case OP_RESET_ARGC:
         return simple_instruction("OP_RESET_ARGC", offset);
-    case OP_SET_ACCESS:
-        return constant_instruction("OP_SET_ACCESS", c, offset);
-    case OP_GET_ACCESS:
-        return constant_instruction("OP_GET_ACCESS", c, offset);
+    case OP_SET_GLOB_ACCESS:
+        return constant_instruction("OP_SET_GLOB_ACCESS", c, offset);
+    case OP_GET_GLOB_ACCESS:
+        return constant_instruction("OP_GET_GLOB_ACCESS", c, offset);
+    case OP_SET_LOCAL_ACCESS:
+        return constant_instruction("OP_SET_LOCAL_ACCESS", c, offset);
+    case OP_GET_LOCAL_ACCESS:
+        return constant_instruction("OP_GET_LOCAL_ACCESS", c, offset);
     case OP_EACH_ACCESS:
         return constant_instruction("OP_EACH_ACCESS", c, offset);
     case OP_METHOD:
@@ -257,6 +261,8 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_ZERO_E1", c, offset);
     case OP_ZERO_E2:
         return byte_instruction("OP_ZERO_E2", c, offset);
+    case OP_ZERO_EL_REGISTERS:
+        return byte_instruction("OP_ZERO_EL_REGISTERS", c, offset);
     case OP_MOV_E1_E2:
         return byte_instruction("OP_MOV_E1_E2", c, offset);
     case OP_MOV_E1_E3:

@@ -579,7 +579,7 @@ Interpretation run(void)
         case OP_AND:
             machine.r1 = _and(machine.r1, machine.r2);
             break;
-        case OP_GET_ACCESS:
+        case OP_GET_GLOB_ACCESS:
         {
 
             Element el = _get_access(machine.r1, machine.e3);
@@ -594,14 +594,39 @@ Interpretation run(void)
 
             break;
         }
-        case OP_SET_ACCESS:
+        case OP_SET_GLOB_ACCESS:
 
             if (machine.e1.type == NULL_OBJ)
                 machine.e1 = OBJ(machine.r1);
 
             _set_access(machine.e1, machine.r4, machine.e3);
             break;
+        case OP_GET_LOCAL_ACCESS:
+        {
 
+            POP(), POP();
+            Element el = _get_access(machine.r1, machine.e3);
+
+            if (el.type == NULL_OBJ)
+                return INTERPRET_RUNTIME_ERR;
+
+            if (el.type != ARENA)
+                machine.e1 = el;
+            else
+                machine.r1 = el.arena;
+
+            PUSH(el);
+
+            break;
+        }
+        case OP_SET_LOCAL_ACCESS:
+
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+
+            POP();
+            _set_access(machine.e1, machine.r4, machine.e3);
+            break;
         case OP_RESET_ARGC:
             machine.cargc = 0;
             machine.argc = 0;
@@ -753,11 +778,10 @@ Interpretation run(void)
             Element el = LOCAL();
 
             PUSH(el);
-
-            if (el.type != ARENA)
-                machine.e1 = el;
-            else
+            if (el.type == ARENA)
                 machine.r2 = el.arena;
+            else
+                machine.e1 = el;
 
             break;
         }
@@ -814,12 +838,9 @@ Interpretation run(void)
                 return INTERPRET_RUNTIME_ERR;
             }
 
-            // PUSH(el);
-
             if (el.type == ARENA)
                 machine.r2 = el.arena;
             else
-
                 machine.e1 = el;
 
             break;
@@ -853,9 +874,21 @@ Interpretation run(void)
         break;
 
         case OP_PRINT:
-            if (machine.e2.type == NULL_OBJ)
-                machine.e2 = OBJ(machine.r1);
-            print_line(machine.e2);
+
+            // POP();
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+
+            print_line(machine.e1);
+            // print_line(machine.e1);
+            break;
+        case OP_PRINT_LOCAL:
+
+            // POP();
+            // if (machine.e1.type == NULL_OBJ)
+            // machine.e1 = OBJ(machine.r1);
+            print_line(POP());
+            // print_line(machine.e1);
             break;
 
         case OP_MOV_PEEK_R1:
@@ -964,6 +997,10 @@ Interpretation run(void)
             machine.e1 = null_obj();
             break;
         case OP_ZERO_E2:
+            machine.e2 = null_obj();
+            break;
+        case OP_ZERO_EL_REGISTERS:
+            machine.e1 = null_obj();
             machine.e2 = null_obj();
             break;
         case OP_STR_R1:

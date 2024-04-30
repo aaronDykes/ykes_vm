@@ -10,9 +10,10 @@
 #include <unistd.h>
 
 #define BIG_NIB(arg) \
-    ((arg >> 8) & 0xFF)
+    ((uint8_t)((arg >> 8) & 0xFF))
 
-#define LIL_NIB(arg) (arg & 0xFF)
+#define LIL_NIB(arg) \
+    ((uint8_t)(arg & 0xFF))
 
 static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
 {
@@ -687,8 +688,8 @@ static void case_statement(Compiler *c, Arena args)
         emit_byte(c, OP_JMPL);
         emit_bytes(
             c,
-            (c->func->ch.cases.count >> 8) & 0xFF,
-            (c->func->ch.cases.count & 0xFF));
+            BIG_NIB(c->func->ch.cases.count),
+            LIL_NIB(c->func->ch.cases.count));
         patch_jump_long(c, begin, tr);
     }
 
@@ -786,11 +787,11 @@ static void patch_jump_long(Compiler *c, int count, int offset)
     if (j1 >= INT16_MAX)
         error("ERROR: To great a distance ", &c->parser);
 
-    c->func->ch.op_codes.listof.Bytes[offset] = (uint8_t)((j2 >> 8) & 0xFF);
-    c->func->ch.op_codes.listof.Bytes[offset + 1] = (uint8_t)(j2 & 0xFF);
+    c->func->ch.op_codes.listof.Bytes[offset] = BIG_NIB(j2);
+    c->func->ch.op_codes.listof.Bytes[offset + 1] = LIL_NIB(j2);
 
-    c->func->ch.op_codes.listof.Bytes[offset + 2] = (uint8_t)((j1 >> 8) & 0xFF);
-    c->func->ch.op_codes.listof.Bytes[offset + 3] = (uint8_t)(j1 & 0xFF);
+    c->func->ch.op_codes.listof.Bytes[offset + 2] = BIG_NIB(j1);
+    c->func->ch.op_codes.listof.Bytes[offset + 3] = LIL_NIB(j1);
 }
 
 static void patch_jump(Compiler *c, int offset)
@@ -801,8 +802,8 @@ static void patch_jump(Compiler *c, int offset)
     if (jump >= INT16_MAX)
         error("ERROR: To great a distance ", &c->parser);
 
-    c->func->ch.op_codes.listof.Bytes[offset] = (uint8_t)((jump >> 8) & 0xFF);
-    c->func->ch.op_codes.listof.Bytes[offset + 1] = (uint8_t)(jump & 0xFF);
+    c->func->ch.op_codes.listof.Bytes[offset] = BIG_NIB(jump);
+    c->func->ch.op_codes.listof.Bytes[offset + 1] = LIL_NIB(jump);
 }
 
 static void emit_loop(Compiler *c, int byte)
@@ -814,7 +815,7 @@ static void emit_loop(Compiler *c, int byte)
     if (offset > UINT16_MAX)
         error("ERROR: big boi loop", &c->parser);
 
-    emit_bytes(c, (offset >> 8) & 0xFF, offset & 0xFF);
+    emit_bytes(c, BIG_NIB(offset), LIL_NIB(offset));
 }
 static int emit_jump_long(Compiler *c, int byte)
 {
@@ -843,12 +844,9 @@ static void default_expression(Compiler *c)
 static void print_statement(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to print expression", &c->parser);
-    c->first_expr = false;
     do
     {
-
-        emit_byte(c, OP_ZERO_E1);
-        // emit_byte(c, OP_MOV_R2_R1);
+        emit_byte(c, OP_ZERO_E2);
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -858,11 +856,11 @@ static void print_statement(Compiler *c)
 
         c->first_expr = false;
         if (check(TOKEN_CH_COMMA, &c->parser))
-            emit_byte(c, OP_PRINT);
+            emit_byte(c, (c->scope_depth > 0) ? OP_PRINT_LOCAL : OP_PRINT);
 
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
-    emit_byte(c, OP_PRINT);
+    emit_byte(c, (c->scope_depth > 0) ? OP_PRINT_LOCAL : OP_PRINT);
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after print expression", &c->parser);
     consume(TOKEN_CH_SEMI, "Expect ';' after value.", &c->parser);
@@ -1093,8 +1091,8 @@ static void emit_bytes(Compiler *c, uint8_t b1, uint8_t b2)
 static void emit_3_bytes(Compiler *c, uint8_t b1, int arg)
 {
     write_chunk(&c->func->ch, b1, c->parser.pre.line);
-    write_chunk(&c->func->ch, (uint8_t)BIG_NIB(arg), c->parser.pre.line);
-    write_chunk(&c->func->ch, (uint8_t)LIL_NIB(arg), c->parser.pre.line);
+    write_chunk(&c->func->ch, BIG_NIB(arg), c->parser.pre.line);
+    write_chunk(&c->func->ch, LIL_NIB(arg), c->parser.pre.line);
 }
 
 static void emit_constant(Compiler *c, Arena ar)
@@ -1311,7 +1309,6 @@ static void table(Compiler *c)
         emit_byte(c, OP_ALLOC_TABLE);
         consume(TOKEN_CH_RPAREN, "Expect `)` after Table declaration", &c->parser);
     }
-    // emit_byte(c, OP_MOV_PEEK_E2);
 }
 
 static int resolve_native(Compiler *c, Arena *ar)
@@ -1768,10 +1765,10 @@ static void _access(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, OP_SET_ACCESS);
+        emit_byte(c, (c->scope_depth > 0) ? OP_SET_LOCAL_ACCESS : OP_SET_GLOB_ACCESS);
     }
     else
-        emit_byte(c, OP_GET_ACCESS);
+        emit_byte(c, (c->scope_depth > 0) ? OP_GET_LOCAL_ACCESS : OP_GET_GLOB_ACCESS);
 }
 
 static void _this(Compiler *c)
@@ -1842,8 +1839,7 @@ static void id(Compiler *c)
         set = OP_SET_GLOBAL;
     }
 
-    // emit_byte(c, OP_ZERO_E1);
-    emit_byte(c, OP_ZERO_E2);
+    emit_byte(c, OP_ZERO_EL_REGISTERS);
 
     if (pre_inc)
         emit_3_bytes(c, get == OP_GET_LOCAL ? OP_INC_LOC : OP_INC_GLO, arg);
@@ -1855,8 +1851,8 @@ static void id(Compiler *c)
         emit_3_bytes(c, get == OP_GET_LOCAL ? OP_INC_LOC : OP_INC_GLO, arg);
     else if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
-        c->first_expr = false;
         expression(c);
+        c->first_expr = false;
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);

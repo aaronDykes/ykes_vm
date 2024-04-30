@@ -40,8 +40,10 @@ typedef enum
     OP_GET_INSTANCE,
 
     OP_EACH_ACCESS,
-    OP_GET_ACCESS,
-    OP_SET_ACCESS,
+    OP_GET_GLOB_ACCESS,
+    OP_SET_GLOB_ACCESS,
+    OP_GET_LOCAL_ACCESS,
+    OP_SET_LOCAL_ACCESS,
     OP_LEN,
 
     OP_ALLOC_TABLE,
@@ -162,6 +164,7 @@ typedef enum
     OP_MOV_E3_E2,
     OP_ZERO_E1,
     OP_ZERO_E2,
+    OP_ZERO_EL_REGISTERS,
 
     OP_MOV_E1_E2,
     OP_MOV_E1_E3,
