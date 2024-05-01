@@ -1,6 +1,12 @@
 
 
-// var i = 0;
-for (var i = 0; i < 10000; i++)
-    pout(i);
 
+
+
+sr sub(a, b, c)
+{
+    pout(a, b, c);
+    
+}
+
+sub("so", "in", "asdjfas");

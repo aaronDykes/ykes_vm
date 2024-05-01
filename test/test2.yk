@@ -12,24 +12,27 @@ sr maf()
     hello += (5 * 10);
 
     hello=hello+5;
-
     hello++;
 
-    var bo = hello == 1061;
+    var bool=hello==1061;
 
+    var s1 = "this";
+    var s2="another";
+    var s3 = "okay";
 
-    pout(hello, bo);
+    pout(hello, bool, s1, s2, s3);
 
 }
-maf();
+// maf();
 
-// sr another()
-// {
-//     var ok=fuck_shit;
-//     ok();
-// }
-
-
+sr another()
+{
+    var ok=maf;
+    ok();
+}
 
 
 
+
+
+another();

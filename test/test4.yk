@@ -1,29 +1,28 @@
 
 sr twod_ar()
 {
-    var ar = Vector(10);
+    // var ar = Vector(10);
 
     var size_ar = Array(["vector", "of", "vectors"]);
-    var another = Array(["another", "vector", "of", "vectors"]);
-    var last = Array(["wow", "wow", "WOW", "unbelieveable", "another", "vector", "of", "vectors"]);
+    // var another = Array(["another", "vector", "of", "vectors"]);
+    // var last = Array(["wow", "wow", "WOW", "unbelieveable", "another", "vector", "of", "vectors"]);
 
-    ar[0] = size_ar;
-    ar[1] = another;
-    ar[2] = last;
+    // ar[0] = size_ar;
+    // ar[1] = another;
+    // ar[2] = last;
 
-    for (var i = 0; i < ar.len; i++)
+    for (var i = 0; i < size_ar.len; i++)
         pout(
-            ar[i],
-            ar[i].len
+            size_ar[i]
         );
 
-    each(var i : ar)
-        pout(i, i.len);
+    // each(var i : ar)
+    //     pout(i, i.len);
 
 
 
-
-    rm(ar); 
+// 
+    // rm(ar); 
 }
 
 twod_ar();

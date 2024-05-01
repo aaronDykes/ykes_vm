@@ -1,6 +1,5 @@
-// sr fun()
-// {
-
+sr fun()
+{
 
     var tab = Table();
 
@@ -31,9 +30,9 @@
         t["Table"]["Table"]["another"]["nest"]
     );
 
-// }
+}
 
-// fun();
+fun();
 
 
 

@@ -10,7 +10,7 @@ import "test3.yk";
 
 
 
-// var p = Prime();
+var p = Prime();
 // var fb = Fizzbang();
 // var nt = Nest(69, 69, 420);
 // var tab = Tables();
@@ -25,7 +25,7 @@ import "test3.yk";
 // );
 // b.file_read_write();
 
-// p.res();
+p.res();
 // fb.fb();
 // fib.res();
 // scone.topping("strawberries ", "cream", 69); 
