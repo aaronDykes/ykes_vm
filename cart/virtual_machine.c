@@ -803,10 +803,10 @@ Interpretation run(void)
         case OP_CALL_LOCAL:
         {
             uint8_t argc = READ_BYTE();
-            if (!call_value(POP(), argc))
+            if (!call_value(NPEEK(argc), argc))
                 return INTERPRET_RUNTIME_ERR;
 
-            machine.e1 = null_obj();
+            machine.e2 = null_obj();
             frame = (machine.frames + (machine.frame_count - 1));
             machine.argc = (argc == 0) ? 1 : argc;
             machine.cargc = 1;
@@ -815,6 +815,7 @@ Interpretation run(void)
         }
         case OP_JMPT:
             frame->ip += (READ_SHORT() * !FALSEY());
+            POP();
             break;
         case OP_JMP_NIL:
         {
@@ -914,7 +915,6 @@ Interpretation run(void)
 
             Arena var = READ_CONSTANT().arena;
             Element el = FIND_GLOB(var);
-            uint8_t str = READ_BYTE();
 
             if (el.type == NULL_OBJ)
             {
@@ -930,7 +930,7 @@ Interpretation run(void)
             else
                 machine.e1 = el;
 
-            if (str)
+            if (READ_BYTE())
                 PUSH(el);
 
             break;
@@ -1145,9 +1145,24 @@ Interpretation run(void)
                 return INTERPRET_SUCCESS;
             }
 
+            for (Stack *s = machine.stack; s < machine.stack->top; s++)
+                POP();
+
             machine.stack->top = frame->slots;
-            if (machine.e1.type == NULL_OBJ)
-                machine.e1 = OBJ(machine.r1);
+
+            // machine.e1 = el;
+
+            // machine.r1 = el.arena;
+            if (el.type == ARENA)
+            {
+                machine.r5 = el.arena;
+                machine.e1 = OBJ(machine.r5);
+            }
+            else
+                machine.e1 = el;
+
+            // if (machine.e1.type == NULL_OBJ)
+            // machine.e1 = OBJ(machine.r5);
             PUSH(el);
 
             frame = &machine.frames[machine.frame_count - 1];

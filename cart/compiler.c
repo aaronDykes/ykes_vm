@@ -541,6 +541,7 @@ static void for_statement(Compiler *c)
         consume(TOKEN_CH_SEMI, "Expect `;` after 'for' condition.", &c->parser);
         exit = emit_jump(c, OP_JMPF);
         emit_byte(c, OP_POP);
+        // emit_3_bytes(c, OP_POPN, add_constant(&c->func->ch, OBJ(Int(2))));
     }
     if (!match(TOKEN_CH_RPAREN, &c->parser))
     {
@@ -711,15 +712,17 @@ static void if_statement(Compiler *c)
 {
 
     emit_byte(c, OP_ZERO_E1);
-    emit_byte(c, OP_ZERO_R5);
     consume_if(c);
 
     int fi = emit_jump(c, OP_JMPF);
-    emit_byte(c, OP_ZERO_R5);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_POP);
 
     statement(c);
 
     int exit = emit_jump(c, OP_JMP);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_POP);
     patch_jump(c, fi);
 
     elif_statement(c);
@@ -729,6 +732,8 @@ static void if_statement(Compiler *c)
 
     Element el = OBJ(c->func->ch.cases);
     push_int(&el, c->func->ch.op_codes.count);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_POP);
     patch_jump(c, exit);
 }
 
@@ -739,7 +744,8 @@ static void elif_statement(Compiler *c)
 
         consume_elif(c);
         int tr = emit_jump_long(c, OP_JMPC);
-        emit_byte(c, OP_ZERO_R5);
+        if (c->scope_depth > 0)
+            emit_byte(c, OP_POP);
         int begin = c->func->ch.op_codes.count;
         statement(c);
         emit_byte(c, OP_JMPL);
@@ -748,6 +754,8 @@ static void elif_statement(Compiler *c)
             BIG_NIB(c->func->ch.cases.count),
             LIL_NIB(c->func->ch.cases.count));
         patch_jump_long(c, begin, tr);
+        if (c->scope_depth > 0)
+            emit_byte(c, OP_POP);
     }
 }
 
@@ -786,6 +794,7 @@ static void return_statement(Compiler *c)
         expression(c);
         c->first_expr = false;
         consume(TOKEN_CH_SEMI, "ERROR: Expect semi colon after return statement.", &c->parser);
+        // if (c->scope_depth > 0)
         emit_byte(c, OP_RETURN);
     }
 }
@@ -1465,6 +1474,8 @@ static void parse_native_var_arg(Compiler *c)
     Arena ar = native_name(ch);
     int arg = resolve_native(c, &ar);
     emit_3_bytes(c, OP_GET_NATIVE, arg);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_STR_E2);
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to function call", &c->parser);
     call(c);
 }
@@ -2310,11 +2321,6 @@ Function *compile_path(const char *src, const char *path, const char *name)
     write_table(c.base->natives, CString("square"), OBJ(Int(c.base->native_count++)));
     write_table(c.base->natives, CString("prime"), OBJ(Int(c.base->native_count++)));
     write_table(c.base->natives, CString("file"), OBJ(Int(c.base->native_count++)));
-
-    // "clock";
-    // "square";
-    // "prime";
-    // "file";
 
     advance_compiler(&c.parser);
 

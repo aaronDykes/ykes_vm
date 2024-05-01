@@ -13,3 +13,5 @@ sr pr()
     pout(clock() - start);
 }
 
+pr();
+

@@ -1,6 +1,6 @@
 
-// sr twod_ar()
-// {
+sr twod_ar()
+{
 
     var size_ar = Array(["vector", "of", "vectors"]);
 
@@ -15,6 +15,6 @@
 
 
 
-// }
+}
 
-// twod_ar();
+twod_ar();
