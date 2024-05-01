@@ -680,9 +680,18 @@ Interpretation run(void)
             machine.cargc = 0;
             machine.argc = 0;
             break;
+        case OP_EACH_LOCAL_ACCESS:
+        {
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+            PUSH((machine.e1 = _get_each_access(machine.e1, machine.cargc++)));
+            break;
+        }
         case OP_EACH_ACCESS:
         {
-            PUSH((machine.e2 = _get_each_access(machine.e2, machine.cargc++)));
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+            machine.e2 = _get_each_access(machine.e1, machine.cargc++);
             break;
         }
         case OP_PUSH_ARRAY_VAL:
@@ -815,15 +824,22 @@ Interpretation run(void)
         }
         case OP_JMPT:
             frame->ip += (READ_SHORT() * !FALSEY());
-            POP();
             break;
         case OP_JMP_NIL:
+        {
+            uint16_t offset = READ_SHORT();
+            if (!not_null(machine.e2))
+                frame->ip += offset;
+            break;
+        }
+        case OP_JMP_NIL_LOCAL:
         {
             uint16_t offset = READ_SHORT();
             if (!not_null(PEEK()))
                 frame->ip += offset;
             break;
         }
+
         case OP_JMP_NOT_NIL:
         {
             uint16_t offset = READ_SHORT();
@@ -848,12 +864,12 @@ Interpretation run(void)
             Element el = LOCAL();
 
             PUSH(el);
-            if (el.type == ARENA)
-            {
-                machine.r2 = machine.r1;
-                machine.r1 = el.arena;
-            }
-            else
+            if (el.type != ARENA)
+                // {
+                //     machine.r2 = machine.r1;
+                //     machine.r1 = el.arena;
+                // }
+                // else
                 machine.e1 = el;
 
             break;
@@ -862,13 +878,13 @@ Interpretation run(void)
         case OP_SET_LOCAL:
         {
 
-            if (machine.e2.type == NULL_OBJ)
-            {
+            // if (machine.e2.type == NULL_OBJ)
+            // {
 
-                if (machine.r5.type != ARENA_NULL)
-                    machine.r1 = machine.r5;
-                machine.e2 = OBJ(machine.r1);
-            }
+            //     if (machine.r5.type != ARENA_NULL)
+            //         machine.r1 = machine.r5;
+            //     machine.e2 = OBJ(machine.r1);
+            // }
 
             LOCAL() = PEEK();
             break;
@@ -1071,6 +1087,9 @@ Interpretation run(void)
         case OP_MOV_E3_E2:
             machine.e2 = machine.e3;
             break;
+        case OP_MOV_E3_E1:
+            machine.e2 = machine.e3;
+            break;
         case OP_MOV_E1_E2:
             machine.e2 = machine.e1;
             break;
@@ -1155,8 +1174,11 @@ Interpretation run(void)
             // machine.r1 = el.arena;
             if (el.type == ARENA)
             {
-                machine.r5 = el.arena;
-                machine.e1 = OBJ(machine.r5);
+                if (el.arena.type == ARENA_BOOL)
+                    machine.r5 = el.arena;
+                else
+                    machine.r1 = el.arena;
+                // machine.e1 = OBJ(machine.r5);
             }
             else
                 machine.e1 = el;

@@ -19,8 +19,13 @@ sr print_prime(n)
 }
 
 
-var start = clock();
-print_prime(100000);
-pout(clock() - start);
 
-// print_prime(10000);
+sr res()
+{
+    var start = clock();
+    print_prime(100000);
+    pout(clock() - start);
+
+}
+
+res();

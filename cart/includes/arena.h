@@ -40,6 +40,7 @@ typedef enum
     OP_GET_INSTANCE,
 
     OP_EACH_ACCESS,
+    OP_EACH_LOCAL_ACCESS,
     OP_GET_GLOB_ACCESS,
     OP_SET_GLOB_ACCESS,
     OP_GET_LOCAL_ACCESS,
@@ -146,6 +147,7 @@ typedef enum
     OP_GE,
 
     OP_JMP_NIL,
+    OP_JMP_NIL_LOCAL,
     OP_JMP_NOT_NIL,
     OP_JMPL,
     OP_JMPC,
@@ -187,6 +189,7 @@ typedef enum
 
     OP_MOV_E1_E2,
     OP_MOV_E1_E3,
+    OP_MOV_E3_E1,
 
     OP_MOV_E1,
     OP_MOV_E2,
