@@ -508,8 +508,9 @@ static void rm_statement(Compiler *c)
         arg = add_constant(&c->func->ch, OBJ(ar));
         get = OP_GET_GLOBAL;
     }
+
     emit_3_bytes(c, get, arg);
-    emit_byte(c, OP_RM);
+    emit_byte(c, (c->scope_depth > 0) ? OP_RM_LOCAL : OP_RM);
     consume(TOKEN_CH_RPAREN, "Expect `)` after rm statement", &c->parser);
     consume(TOKEN_CH_SEMI, "Expect `;` at end of statement", &c->parser);
 }
@@ -1589,7 +1590,7 @@ static void dot(Compiler *c)
 
     if (ar.as.hash == c->base->len.as.hash)
     {
-        emit_byte(c, OP_LEN);
+        emit_bytes(c, (c->scope_depth > 0) ? OP_LEN_LOCAL : OP_LEN, OP_ZERO_E1);
         return;
     }
     if (ar.as.hash == c->base->ar_push.as.hash)
@@ -1911,16 +1912,7 @@ static void _access(Compiler *c)
         emit_byte(c, (c->scope_depth > 0) ? OP_SET_LOCAL_ACCESS : OP_SET_GLOB_ACCESS);
     }
     else
-    {
-
-        if (c->scope_depth > 0)
-        {
-            // emit_3_bytes(c, OP_POPN, add_constant(&c->func->ch, OBJ(Int(2))));
-            emit_byte(c, OP_GET_LOCAL_ACCESS);
-        }
-        else
-            emit_byte(c, OP_GET_GLOB_ACCESS);
-    }
+        emit_byte(c, (c->scope_depth > 0) ? OP_GET_LOCAL_ACCESS : OP_GET_GLOB_ACCESS);
 }
 
 static void _this(Compiler *c)
@@ -1936,6 +1928,9 @@ static void _this(Compiler *c)
     emit_3_bytes(
         c, OP_GET_CLASS,
         arg);
+
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_STR_E2);
 }
 
 static void id(Compiler *c)
@@ -1968,6 +1963,7 @@ static void id(Compiler *c)
             call(c);
         }
         emit_3_bytes(c, OP_GET_CLASS, arg);
+        emit_byte(c, OP_MOV_E2_E1);
         if (c->scope_depth > 0)
             emit_byte(c, OP_STR_E2);
         return;
@@ -2115,8 +2111,11 @@ static void id(Compiler *c)
     }
     else
     {
-        // emit_byte(c, OP_MOV_R1_R3);
         emit_3_bytes(c, get, arg);
+        if (get == OP_GET_GLOBAL && c->scope_depth > 0)
+            emit_byte(c, 1);
+        else if (get == OP_GET_GLOBAL)
+            emit_byte(c, 0);
 
         if (check(TOKEN_CH_DOT, &c->parser))
             c->array_set = set,

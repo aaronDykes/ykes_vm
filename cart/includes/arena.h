@@ -45,6 +45,7 @@ typedef enum
     OP_GET_LOCAL_ACCESS,
     OP_SET_LOCAL_ACCESS,
     OP_LEN,
+    OP_LEN_LOCAL,
 
     OP_ALLOC_TABLE,
 
@@ -57,6 +58,7 @@ typedef enum
     OP_POPN,
     OP_PUSH,
     OP_RM,
+    OP_RM_LOCAL,
     OP_CLOSE_UPVAL,
 
     OP_PUSH_TOP,

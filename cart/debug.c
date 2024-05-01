@@ -120,6 +120,8 @@ int disassemble_instruction(Chunk *c, int offset)
         return simple_instruction("OP_NEG", offset);
     case OP_LEN:
         return simple_instruction("OP_LEN", offset);
+    case OP_LEN_LOCAL:
+        return simple_instruction("OP_LEN_LOCAL", offset);
     case OP_INC:
         return simple_instruction("OP_DEC", offset);
     case OP_DEC:
@@ -202,6 +204,8 @@ int disassemble_instruction(Chunk *c, int offset)
 
     case OP_RM:
         return byte_instruction("OP_RM", c, offset);
+    case OP_RM_LOCAL:
+        return byte_instruction("OP_RM_LOCAL", c, offset);
     case OP_GET_GLOBAL:
         return simple_instruction("OP_GET_GLOBAL", offset);
 
