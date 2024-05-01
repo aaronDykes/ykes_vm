@@ -71,7 +71,7 @@ struct Compiler
     int class_count;
     int native_count;
     bool first_expr;
-    bool variable_dec;
+    bool call_param;
 
     // const char *src;
     uint8_t array_index;
@@ -193,7 +193,7 @@ static void error_at(Token t, Parser *parser, const char *err);
 static void emit_byte(Compiler *c, uint8_t byte);
 static void emit_bytes(Compiler *c, uint8_t b1, uint8_t b2);
 static void emit_3_bytes(Compiler *c, uint8_t b1, int arg);
-static void emit_constant(Compiler *c, Arena ar);
+static void emit_constant(Compiler *c, Element el);
 static void emit_return(Compiler *c);
 
 static void array(Compiler *c);

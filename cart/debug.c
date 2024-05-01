@@ -90,6 +90,8 @@ int disassemble_instruction(Chunk *c, int offset)
         return constant_instruction("OP_SET_LOCAL_ACCESS", c, offset);
     case OP_GET_LOCAL_ACCESS:
         return constant_instruction("OP_GET_LOCAL_ACCESS", c, offset);
+    case OP_SET_LOCAL_PARAM:
+        return constant_instruction("OP_SET_LOCAL_PARAM", c, offset);
     case OP_EACH_ACCESS:
         return constant_instruction("OP_EACH_ACCESS", c, offset);
     case OP_METHOD:
@@ -140,6 +142,7 @@ int disassemble_instruction(Chunk *c, int offset)
         return simple_instruction("OP_DIV", offset);
     case OP_MOD:
         return simple_instruction("OP_MOD", offset);
+
     case OP_LT:
         return simple_instruction("OP_LT", offset);
     case OP_LE:
@@ -160,6 +163,34 @@ int disassemble_instruction(Chunk *c, int offset)
         return simple_instruction("OP_AND", offset);
     case OP_OR:
         return simple_instruction("OP_OR", offset);
+
+    case OP_ADD_LOCAL:
+        return simple_instruction("OP_ADD_LOCAL", offset);
+    case OP_SUB_LOCAL:
+        return simple_instruction("OP_SUB_LOCAL", offset);
+    case OP_MUL_LOCAL:
+        return simple_instruction("OP_MUL_LOCAL", offset);
+    case OP_MOD_LOCAL:
+        return simple_instruction("OP_MOD_LOCAL", offset);
+    case OP_DIV_LOCAL:
+        return simple_instruction("OP_DIV_LOCAL", offset);
+    case OP_SEQ_LOCAL:
+        return simple_instruction("OP_SEQ_LOCAL", offset);
+    case OP_SNE_LOCAL:
+        return simple_instruction("OP_SNE_LOCAL", offset);
+    case OP_EQ_LOCAL:
+        return simple_instruction("OP_EQ_LOCAL", offset);
+    case OP_NE_LOCAL:
+        return simple_instruction("OP_NE_LOCAL", offset);
+    case OP_LT_LOCAL:
+        return simple_instruction("OP_LT_LOCAL", offset);
+    case OP_LE_LOCAL:
+        return simple_instruction("OP_LE_LOCAL", offset);
+    case OP_GT_LOCAL:
+        return simple_instruction("OP_GT_LOCAL", offset);
+    case OP_GE_LOCAL:
+        return simple_instruction("OP_GE_LOCAL", offset);
+
     case OP_ALLOC_TABLE:
         return simple_instruction("OP_ALLOC_TABLE", offset);
     case OP_NULL:
@@ -201,6 +232,8 @@ int disassemble_instruction(Chunk *c, int offset)
         return simple_instruction("OP_POP", offset);
     case OP_CALL:
         return byte_instruction("OP_CALL", c, offset);
+    case OP_CALL_LOCAL:
+        return byte_instruction("OP_CALL_LOCAL", c, offset);
     case OP_PRINT:
         return simple_instruction("OP_PRINT", offset);
     case OP_PRINT_LOCAL:
@@ -211,6 +244,19 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_GET_PROP", c, offset);
     case OP_SET_PROP:
         return byte_instruction("OP_SET_PROP", c, offset);
+
+    case OP_ZERO_ARENA_REGISTERS:
+        return simple_instruction("OP_ZERO_ARENA_REGISTERS", offset);
+    case OP_ZERO_R1:
+        return simple_instruction("OP_ZERO_R1", offset);
+    case OP_ZERO_R2:
+        return simple_instruction("OP_ZERO_R2", offset);
+    case OP_ZERO_R3:
+        return simple_instruction("OP_ZERO_R3", offset);
+    case OP_ZERO_R4:
+        return simple_instruction("OP_ZERO_R4", offset);
+    case OP_ZERO_R5:
+        return simple_instruction("OP_ZERO_R5", offset);
 
     case OP_MOV_PEEK_R1:
         return byte_instruction("OP_MOV_PEEK_R1", c, offset);
@@ -224,6 +270,18 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_MOV_R2", c, offset);
     case OP_MOV_R3:
         return byte_instruction("OP_MOV_R3", c, offset);
+
+    case OP_STR_R1:
+        return simple_instruction("OP_STR_R1", offset);
+    case OP_STR_R2:
+        return simple_instruction("OP_STR_R2", offset);
+    case OP_STR_R3:
+        return simple_instruction("OP_STR_R3", offset);
+    case OP_STR_R4:
+        return simple_instruction("OP_STR_R4", offset);
+    case OP_STR_R5:
+        return simple_instruction("OP_STR_R5", offset);
+
     case OP_MOV_CNT_R1:
         return byte_instruction("OP_MOV_CNT_R1", c, offset);
     case OP_MOV_CNT_R2:

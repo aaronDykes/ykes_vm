@@ -10,10 +10,10 @@
 #include <unistd.h>
 
 #define BIG_NIB(arg) \
-    ((uint8_t)((arg >> 8) & 0xFF))
+    ((arg >> 8) & 0xFF)
 
 #define LIL_NIB(arg) \
-    ((uint8_t)(arg & 0xFF))
+    ((arg & 0xFF))
 
 static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
 {
@@ -25,6 +25,7 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
     a->call_count = 0;
     a->class_count = 0;
     a->first_expr = false;
+    a->call_param = false;
 
     a->array_index = 0;
     a->array_set = 0;
@@ -306,7 +307,8 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
 static void call(Compiler *c)
 {
     uint8_t argc = argument_list(c);
-    emit_bytes(c, OP_CALL, argc);
+
+    emit_bytes(c, (c->scope_depth > 0) ? OP_CALL_LOCAL : OP_CALL, argc);
 }
 
 static int argument_list(Compiler *c)
@@ -315,6 +317,7 @@ static int argument_list(Compiler *c)
 
     if (match(TOKEN_CH_RPAREN, &c->parser))
         return 0;
+    c->call_param = true;
     do
     {
         expression(c);
@@ -323,6 +326,8 @@ static int argument_list(Compiler *c)
         argc++;
 
     } while (match(TOKEN_CH_COMMA, &c->parser));
+
+    c->call_param = false;
     consume(TOKEN_CH_RPAREN, "Expect `)` after function args", &c->parser);
     return argc;
 }
@@ -402,7 +407,9 @@ static void var_dec(Compiler *c)
     Arena ar = parse_id(c);
     int glob = parse_var(c, ar);
 
+    emit_bytes(c, OP_ZERO_R5, OP_ZERO_E2);
     uint8_t set = 0;
+
     if (glob != -1)
         set = OP_GLOBAL_DEF;
     else
@@ -457,6 +464,7 @@ static void synchronize(Parser *parser)
 static void statement(Compiler *c)
 {
 
+    // c->first_expr = false;
     if (match(TOKEN_PRINT, &c->parser))
         print_statement(c);
     else if (match(TOKEN_OP_REM, &c->parser))
@@ -566,11 +574,12 @@ static void while_statement(Compiler *c)
 
     consume(TOKEN_CH_LPAREN, "Expect `(` after 'while'.", &c->parser);
     expression(c);
+    if (c->scope_depth > 0)
+        emit_3_bytes(c, OP_POPN, add_constant(&c->func->ch, OBJ(Int(2))));
     c->first_expr = false;
     consume(TOKEN_CH_RPAREN, "Expect `)` after 'while' condition.", &c->parser);
 
     int exit_jmp = emit_jump(c, OP_JMPF);
-    emit_byte(c, OP_POP);
 
     statement(c);
 
@@ -579,7 +588,6 @@ static void while_statement(Compiler *c)
 
     // If true, exit
     patch_jump(c, exit_jmp);
-    emit_byte(c, OP_POP);
 }
 static void each_statement(Compiler *c)
 {
@@ -639,6 +647,7 @@ static void consume_elif(Compiler *c)
     consume(TOKEN_CH_LPAREN, "Expect `(` after an 'elif'.", &c->parser);
     expression(c);
     c->first_expr = false;
+
     consume(TOKEN_CH_RPAREN, "Expect `)` after an 'elif' condtion.", &c->parser);
 }
 
@@ -654,6 +663,8 @@ static void switch_statement(Compiler *c)
 {
     Arena args = consume_switch(c);
     bool expect = match(TOKEN_CH_LCURL, &c->parser);
+
+    emit_byte(c, OP_ZERO_E1);
 
     case_statement(c, args);
 
@@ -683,7 +694,6 @@ static void case_statement(Compiler *c, Arena args)
 
         int tr = emit_jump_long(c, OP_JMPC);
         int begin = c->func->ch.op_codes.count;
-        emit_byte(c, OP_POP);
         statement(c);
         emit_byte(c, OP_JMPL);
         emit_bytes(
@@ -699,16 +709,17 @@ static void case_statement(Compiler *c, Arena args)
 static void if_statement(Compiler *c)
 {
 
+    emit_byte(c, OP_ZERO_E1);
+    emit_byte(c, OP_ZERO_R5);
     consume_if(c);
 
     int fi = emit_jump(c, OP_JMPF);
-    // If truthy, follow through
-    emit_byte(c, OP_POP);
+    emit_byte(c, OP_ZERO_R5);
+
     statement(c);
 
     int exit = emit_jump(c, OP_JMP);
     patch_jump(c, fi);
-    emit_byte(c, OP_POP);
 
     elif_statement(c);
 
@@ -724,10 +735,11 @@ static void elif_statement(Compiler *c)
 {
     while (match(TOKEN_ELIF, &c->parser))
     {
+
         consume_elif(c);
         int tr = emit_jump_long(c, OP_JMPC);
+        emit_byte(c, OP_ZERO_R5);
         int begin = c->func->ch.op_codes.count;
-        emit_byte(c, OP_POP);
         statement(c);
         emit_byte(c, OP_JMPL);
         emit_bytes(
@@ -735,7 +747,6 @@ static void elif_statement(Compiler *c)
             BIG_NIB(c->func->ch.cases.count),
             LIL_NIB(c->func->ch.cases.count));
         patch_jump_long(c, begin, tr);
-        // emit_byte(c, OP_POP);
     }
 }
 
@@ -844,6 +855,7 @@ static void default_expression(Compiler *c)
 static void print_statement(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to print expression", &c->parser);
+    // c->first_expr = false;
     do
     {
         emit_byte(c, OP_ZERO_E2);
@@ -977,56 +989,108 @@ static void binary(Compiler *c)
     PRule *rule = get_rule(t);
     parse_precedence((Precedence)rule->prec + 1, c);
 
-    switch (t)
-    {
-    case TOKEN_OP_ADD:
-        emit_byte(c, OP_ADD);
-        break;
-    case TOKEN_OP_SUB:
-        emit_byte(c, OP_SUB);
-        break;
-    case TOKEN_OP_MUL:
-        emit_byte(c, OP_MUL);
-        break;
-    case TOKEN_OP_DIV:
-        emit_byte(c, OP_DIV);
-        break;
-    case TOKEN_OP_MOD:
-        emit_byte(c, OP_MOD);
-        break;
-    case TOKEN_OP_NE:
-        emit_byte(c, OP_NE);
-        break;
-    case TOKEN_OP_EQ:
-        emit_byte(c, OP_EQ);
-        break;
-    case TOKEN_OP_SNE:
-        emit_byte(c, OP_SNE);
-        break;
-    case TOKEN_OP_SEQ:
-        emit_byte(c, OP_SEQ);
-        break;
-    case TOKEN_OP_GT:
-        emit_byte(c, OP_GT);
-        break;
-    case TOKEN_OP_GE:
-        emit_byte(c, OP_GE);
-        break;
-    case TOKEN_OP_LT:
-        emit_byte(c, OP_LT);
-        break;
-    case TOKEN_OP_LE:
-        emit_byte(c, OP_LE);
-        break;
-    case TOKEN_OP_OR:
-        emit_byte(c, OP_OR);
-        break;
-    case TOKEN_OP_AND:
-        emit_byte(c, OP_AND);
-        break;
-    default:
-        return;
-    }
+    if (c->scope_depth > 0)
+        switch (t)
+        {
+        case TOKEN_OP_ADD:
+            emit_byte(c, OP_ADD_LOCAL);
+            break;
+        case TOKEN_OP_SUB:
+            emit_byte(c, OP_SUB_LOCAL);
+            break;
+        case TOKEN_OP_MUL:
+            emit_byte(c, OP_MUL_LOCAL);
+            break;
+        case TOKEN_OP_DIV:
+            emit_byte(c, OP_DIV_LOCAL);
+            break;
+        case TOKEN_OP_MOD:
+            emit_byte(c, OP_MOD_LOCAL);
+            break;
+        case TOKEN_OP_NE:
+            emit_byte(c, OP_NE_LOCAL);
+            break;
+        case TOKEN_OP_EQ:
+            emit_byte(c, OP_EQ_LOCAL);
+            break;
+        case TOKEN_OP_SNE:
+            emit_byte(c, OP_SNE_LOCAL);
+            break;
+        case TOKEN_OP_SEQ:
+            emit_byte(c, OP_SEQ_LOCAL);
+            break;
+        case TOKEN_OP_GT:
+            emit_byte(c, OP_GT_LOCAL);
+            break;
+        case TOKEN_OP_GE:
+            emit_byte(c, OP_GE_LOCAL);
+            break;
+        case TOKEN_OP_LT:
+            emit_byte(c, OP_LT_LOCAL);
+            break;
+        case TOKEN_OP_LE:
+            emit_byte(c, OP_LE_LOCAL);
+            break;
+        case TOKEN_OP_OR:
+            emit_byte(c, OP_OR_LOCAL);
+            break;
+        case TOKEN_OP_AND:
+            emit_byte(c, OP_AND_LOCAL);
+            break;
+        default:
+            return;
+        }
+    else
+        switch (t)
+        {
+        case TOKEN_OP_ADD:
+            emit_byte(c, OP_ADD);
+            break;
+        case TOKEN_OP_SUB:
+            emit_byte(c, OP_SUB);
+            break;
+        case TOKEN_OP_MUL:
+            emit_byte(c, OP_MUL);
+            break;
+        case TOKEN_OP_DIV:
+            emit_byte(c, OP_DIV);
+            break;
+        case TOKEN_OP_MOD:
+            emit_byte(c, OP_MOD);
+            break;
+        case TOKEN_OP_NE:
+            emit_byte(c, OP_NE);
+            break;
+        case TOKEN_OP_EQ:
+            emit_byte(c, OP_EQ);
+            break;
+        case TOKEN_OP_SNE:
+            emit_byte(c, OP_SNE);
+            break;
+        case TOKEN_OP_SEQ:
+            emit_byte(c, OP_SEQ);
+            break;
+        case TOKEN_OP_GT:
+            emit_byte(c, OP_GT);
+            break;
+        case TOKEN_OP_GE:
+            emit_byte(c, OP_GE);
+            break;
+        case TOKEN_OP_LT:
+            emit_byte(c, OP_LT);
+            break;
+        case TOKEN_OP_LE:
+            emit_byte(c, OP_LE);
+            break;
+        case TOKEN_OP_OR:
+            emit_byte(c, OP_OR);
+            break;
+        case TOKEN_OP_AND:
+            emit_byte(c, OP_AND);
+            break;
+        default:
+            return;
+        }
 }
 static void unary(Compiler *c)
 {
@@ -1095,11 +1159,11 @@ static void emit_3_bytes(Compiler *c, uint8_t b1, int arg)
     write_chunk(&c->func->ch, LIL_NIB(arg), c->parser.pre.line);
 }
 
-static void emit_constant(Compiler *c, Arena ar)
+static void emit_constant(Compiler *c, Element el)
 {
     emit_3_bytes(
         c, OP_CONSTANT,
-        add_constant(&c->func->ch, OBJ(ar)));
+        add_constant(&c->func->ch, el));
 }
 
 static void pi(Compiler *c)
@@ -1108,10 +1172,16 @@ static void pi(Compiler *c)
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 
 static void euler(Compiler *c)
@@ -1120,10 +1190,16 @@ static void euler(Compiler *c)
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 
 static void dval(Compiler *c)
@@ -1134,22 +1210,37 @@ static void dval(Compiler *c)
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
+
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 static void ival(Compiler *c)
 {
 
     int arg = add_constant(&c->func->ch, OBJ(Int((atoi(c->parser.pre.start)))));
+
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
+
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 static void llint(Compiler *c)
 {
@@ -1158,10 +1249,17 @@ static void llint(Compiler *c)
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
+
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 static void ch(Compiler *c)
 {
@@ -1170,10 +1268,17 @@ static void ch(Compiler *c)
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
+
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 
 static void boolean(Compiler *c)
@@ -1186,10 +1291,17 @@ static void boolean(Compiler *c)
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
+
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 static const char *parse_string(Compiler *c)
 {
@@ -1205,10 +1317,17 @@ static void cstr(Compiler *c)
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
+
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 static void string(Compiler *c)
 {
@@ -1220,10 +1339,17 @@ static void string(Compiler *c)
     if (!c->first_expr)
     {
         emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
         c->first_expr = true;
     }
     else
+    {
+
         emit_3_bytes(c, OP_MOV_CNT_R2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R2);
+    }
 }
 
 static void array_alloc(Compiler *c)
@@ -1231,7 +1357,12 @@ static void array_alloc(Compiler *c)
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to allocation.", &c->parser);
 
     if (match(TOKEN_INT, &c->parser))
-        emit_constant(c, GROW_ARRAY(NULL, atoi(c->parser.pre.start), ARENA_INTS));
+    {
+        int arg = add_constant(&c->func->ch, OBJ(GROW_ARRAY(NULL, atoi(c->parser.pre.start), ARENA_INTS)));
+        emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_R1);
+    }
     else if (match(TOKEN_ID, &c->parser))
     {
         id(c);
@@ -1309,6 +1440,9 @@ static void table(Compiler *c)
         emit_byte(c, OP_ALLOC_TABLE);
         consume(TOKEN_CH_RPAREN, "Expect `)` after Table declaration", &c->parser);
     }
+
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_STR_E2);
 }
 
 static int resolve_native(Compiler *c, Arena *ar)
@@ -1662,7 +1796,9 @@ static void int_array(Compiler *c)
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
     int arg = add_constant(&c->func->ch, el);
-    emit_3_bytes(c, OP_CONSTANT, arg);
+    emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_STR_R1);
 }
 static void double_array(Compiler *c)
 {
@@ -1680,7 +1816,9 @@ static void double_array(Compiler *c)
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
     int arg = add_constant(&c->func->ch, el);
-    emit_3_bytes(c, OP_CONSTANT, arg);
+    emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_STR_R1);
 }
 static void string_array(Compiler *c)
 {
@@ -1698,7 +1836,9 @@ static void string_array(Compiler *c)
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
     int arg = add_constant(&c->func->ch, el);
-    emit_3_bytes(c, OP_CONSTANT, arg);
+    emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_STR_R1);
 }
 static void long_array(Compiler *c)
 {
@@ -1715,12 +1855,15 @@ static void long_array(Compiler *c)
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
     int arg = add_constant(&c->func->ch, el);
-    emit_3_bytes(c, OP_CONSTANT, arg);
+    emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_STR_R1);
 }
 
 static void array(Compiler *c)
 {
 
+    emit_byte(c, OP_ZERO_E1);
     switch (c->parser.cur.type)
     {
     case TOKEN_INT:
@@ -1768,7 +1911,16 @@ static void _access(Compiler *c)
         emit_byte(c, (c->scope_depth > 0) ? OP_SET_LOCAL_ACCESS : OP_SET_GLOB_ACCESS);
     }
     else
-        emit_byte(c, (c->scope_depth > 0) ? OP_GET_LOCAL_ACCESS : OP_GET_GLOB_ACCESS);
+    {
+
+        if (c->scope_depth > 0)
+        {
+            // emit_3_bytes(c, OP_POPN, add_constant(&c->func->ch, OBJ(Int(2))));
+            emit_byte(c, OP_GET_LOCAL_ACCESS);
+        }
+        else
+            emit_byte(c, OP_GET_GLOB_ACCESS);
+    }
 }
 
 static void _this(Compiler *c)
@@ -1800,6 +1952,8 @@ static void id(Compiler *c)
     if (arg != -1)
     {
         emit_3_bytes(c, OP_GET_CLOSURE, arg);
+        if (c->scope_depth > 0)
+            emit_byte(c, OP_STR_E2);
         return;
     }
 
@@ -1814,6 +1968,8 @@ static void id(Compiler *c)
             call(c);
         }
         emit_3_bytes(c, OP_GET_CLASS, arg);
+        if (c->scope_depth > 0)
+            emit_byte(c, OP_STR_E2);
         return;
     }
 
@@ -1840,6 +1996,7 @@ static void id(Compiler *c)
     }
 
     emit_byte(c, OP_ZERO_EL_REGISTERS);
+    emit_byte(c, OP_ZERO_R5);
 
     if (pre_inc)
         emit_3_bytes(c, get == OP_GET_LOCAL ? OP_INC_LOC : OP_INC_GLO, arg);
@@ -1852,7 +2009,6 @@ static void id(Compiler *c)
     else if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
         expression(c);
-        c->first_expr = false;
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -1864,7 +2020,6 @@ static void id(Compiler *c)
     else if (match(TOKEN_ADD_ASSIGN, &c->parser))
     {
         emit_3_bytes(c, get, arg);
-        emit_byte(c, OP_MOV_R2_R1);
         c->first_expr = true;
 
         expression(c);
@@ -1874,7 +2029,7 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, OP_ADD);
+        emit_byte(c, (c->scope_depth > 0) ? OP_ADD_LOCAL : OP_ADD);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_SUB_ASSIGN, &c->parser))
@@ -1889,14 +2044,13 @@ static void id(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_SUB);
+        emit_byte(c, (c->scope_depth > 0) ? OP_SUB_LOCAL : OP_SUB);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_MUL_ASSIGN, &c->parser))
     {
 
         emit_3_bytes(c, get, arg);
-        emit_byte(c, OP_MOV_R2_R1);
         c->first_expr = true;
 
         expression(c);
@@ -1905,26 +2059,24 @@ static void id(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_MUL);
+        emit_byte(c, (c->scope_depth > 0) ? OP_MUL_LOCAL : OP_MUL);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_DIV_ASSIGN, &c->parser))
     {
         emit_3_bytes(c, get, arg);
-        emit_byte(c, OP_MOV_R2_R1);
         c->first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, OP_DIV);
+        emit_byte(c, (c->scope_depth > 0) ? OP_DIV_LOCAL : OP_DIV);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_MOD_ASSIGN, &c->parser))
     {
         emit_3_bytes(c, get, arg);
-        emit_byte(c, OP_MOV_R2_R1);
         c->first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -1932,13 +2084,12 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, OP_MOD);
+        emit_byte(c, (c->scope_depth > 0) ? OP_MOD_LOCAL : OP_MOD);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_AND_ASSIGN, &c->parser))
     {
         emit_3_bytes(c, get, arg);
-        emit_byte(c, OP_MOV_R2_R1);
         c->first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -1946,13 +2097,12 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, OP_AND);
+        emit_byte(c, (c->scope_depth > 0) ? OP_AND_LOCAL : OP_AND);
         emit_3_bytes(c, set, arg);
     }
     else if (match(TOKEN_OR__ASSIGN, &c->parser))
     {
         emit_3_bytes(c, get, arg);
-        emit_byte(c, OP_MOV_R2_R1);
         c->first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -1960,11 +2110,12 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, OP_OR);
+        emit_byte(c, (c->scope_depth > 0) ? OP_OR_LOCAL : OP_OR);
         emit_3_bytes(c, set, arg);
     }
     else
     {
+        // emit_byte(c, OP_MOV_R1_R3);
         emit_3_bytes(c, get, arg);
 
         if (check(TOKEN_CH_DOT, &c->parser))

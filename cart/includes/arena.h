@@ -68,6 +68,7 @@ typedef enum
     OP_GET_METHOD,
     OP_GET_CLASS,
     OP_GET_NATIVE,
+    OP_GET_NATIVE_LOCAL,
 
     OP_GLOBAL_DEF,
     OP_SET_GLOBAL,
@@ -111,11 +112,27 @@ typedef enum
     OP_MOD,
     OP_DIV,
 
+    OP_ADD_LOCAL,
+    OP_SUB_LOCAL,
+    OP_MUL_LOCAL,
+    OP_MOD_LOCAL,
+    OP_DIV_LOCAL,
+    OP_SEQ_LOCAL,
+    OP_SNE_LOCAL,
+    OP_EQ_LOCAL,
+    OP_NE_LOCAL,
+    OP_LT_LOCAL,
+    OP_LE_LOCAL,
+    OP_GT_LOCAL,
+    OP_GE_LOCAL,
+
     OP_BIT_AND,
     OP_BIT_OR,
 
     OP_AND,
     OP_OR,
+    OP_AND_LOCAL,
+    OP_OR_LOCAL,
 
     OP_SEQ,
     OP_SNE,
@@ -181,11 +198,21 @@ typedef enum
     OP_STR_R1,
     OP_STR_R2,
     OP_STR_R3,
+    OP_STR_R4,
+    OP_STR_R5,
 
     OP_STR_E1,
     OP_STR_E2,
 
+    OP_ZERO_ARENA_REGISTERS,
+    OP_ZERO_R1,
+    OP_ZERO_R2,
+    OP_ZERO_R3,
+    OP_ZERO_R4,
+    OP_ZERO_R5,
+
     OP_CALL,
+    OP_CALL_LOCAL,
     OP_METHOD,
 
     OP_NULL,

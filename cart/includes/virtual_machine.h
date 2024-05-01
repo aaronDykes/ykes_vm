@@ -38,7 +38,7 @@ struct vm
     Arena
         r1,
         r2,
-        r3, r4; /* Everything else */
+        r3, r4, r5; /* Everything else */
 
     CallFrame frames[FRAMES_MAX];
     Stack *stack;
