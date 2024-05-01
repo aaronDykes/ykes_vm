@@ -94,6 +94,8 @@ int disassemble_instruction(Chunk *c, int offset)
         return constant_instruction("OP_SET_LOCAL_PARAM", c, offset);
     case OP_EACH_ACCESS:
         return constant_instruction("OP_EACH_ACCESS", c, offset);
+    case OP_EACH_LOCAL_ACCESS:
+        return constant_instruction("OP_EACH_LOCAL_ACCESS", c, offset);
     case OP_METHOD:
         return constant_instruction("OP_METHOD", c, offset);
     case OP_CLASS:
@@ -216,6 +218,8 @@ int disassemble_instruction(Chunk *c, int offset)
 
     case OP_JMP_NIL:
         return jump_instruction("OP_JMP_NIL", 1, c, offset);
+    case OP_JMP_NIL_LOCAL:
+        return jump_instruction("OP_JMP_NIL_LOCAL", 1, c, offset);
     case OP_JMP_NOT_NIL:
         return jump_instruction("OP_JMP_NOT_NIL", 1, c, offset);
     case OP_JMPF:

@@ -1,16 +1,16 @@
 
-// sr twod_ar()
-// {
+sr twod_ar()
+{
 
     var size_ar = Array(["vector", "of", "vectors"]);
 
 
     // pout(size_ar, size_ar.len);
 
-    // var len = size_ar.len;
+    var len = size_ar.len;
 
-    // for (var i = 0; i < len; i++)
-    //     pout(size_ar[i], size_ar[i].len);
+    for (var i = 0; i < len; i++)
+        pout(size_ar[i], size_ar[i].len);
 
 
     each(var i : size_ar)
@@ -18,6 +18,6 @@
 
 
 
-// }
+}
 
-// twod_ar();
+twod_ar();

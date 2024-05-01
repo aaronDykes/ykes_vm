@@ -682,9 +682,9 @@ Interpretation run(void)
             break;
         case OP_EACH_LOCAL_ACCESS:
         {
-            if (machine.e1.type == NULL_OBJ)
-                machine.e1 = OBJ(machine.r1);
-            PUSH((machine.e1 = _get_each_access(machine.e1, machine.cargc++)));
+            // if (machine.e1.type == NULL_OBJ)
+            // machine.e1 = OBJ(machine.r1);
+            PUSH(_get_each_access(POP(), machine.cargc++));
             break;
         }
         case OP_EACH_ACCESS:
