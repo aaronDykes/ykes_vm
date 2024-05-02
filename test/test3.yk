@@ -19,11 +19,7 @@ class Blue
             this.write_path,
             "var okay=69420;"
         );
-        file(
-            "a", 
-            this.write_path,
-            "var str=69;"
-        );
+        
     }
 
 

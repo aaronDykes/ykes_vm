@@ -6,31 +6,25 @@ class Nest
     this.b = b;
     this.c = c;
   }
-  set_a(val)
-  {
-    this.a += val;
-  }
 
-  f()
+  geta()
   {
-    this.set_a(41);
     return this.a;
   }
-
-  g()
+  getb()
   {
     return this.b;
   }
-
-  h()
+  getc()
   {
     return this.c;
   }
-
   sum()
   {
-    return this.f() + this.g() + this.h();
+    pout(this.geta() + this.getb() + this.getc());
   }
+  
+
 
 }
 
