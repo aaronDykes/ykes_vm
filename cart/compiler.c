@@ -309,6 +309,7 @@ static void call(Compiler *c)
     uint8_t argc = argument_list(c);
 
     emit_bytes(c, (c->scope_depth > 0) ? OP_CALL_LOCAL : OP_CALL, argc);
+    // emit_bytes(c, OP_CALL, argc);
 }
 
 static int argument_list(Compiler *c)
@@ -407,7 +408,7 @@ static void var_dec(Compiler *c)
     Arena ar = parse_id(c);
     int glob = parse_var(c, ar);
 
-    emit_bytes(c, OP_ZERO_R5, OP_ZERO_E2);
+    // emit_bytes(c, OP_ZERO_R5, OP_ZERO_E2);
     uint8_t set = 0;
 
     if (glob != -1)
@@ -870,7 +871,6 @@ static void print_statement(Compiler *c)
     // c->first_expr = false;
     do
     {
-        emit_byte(c, OP_ZERO_E2);
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -1979,6 +1979,9 @@ static void id(Compiler *c)
             emit_3_bytes(c, OP_MOV_CNT_E2, cst);
 
             consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
+            if (c->scope_depth > 0)
+                emit_byte(c, OP_STR_E2);
+
             call(c);
         }
         emit_3_bytes(c, OP_GET_CLASS, arg);

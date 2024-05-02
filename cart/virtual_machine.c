@@ -788,17 +788,15 @@ Interpretation run(void)
 
             Element n = find_entry(&machine.e3.instance->classc->fields, &name);
 
-            if (n.type != NULL_OBJ)
-            {
-                if (n.type != ARENA)
-                    // machine.e1 = n;
-                    machine.e2 = n;
+            if (n.type != ARENA)
+                // machine.e1 = n;
+                machine.e2 = n;
 
-                else
-                    PUSH(n);
-                // machine.e1 = OBJ(n.arena);
+            // else
+            PUSH(n);
+            // machine.e1 = OBJ(n.arena);
+            if (n.type != NULL_OBJ)
                 break;
-            }
 
             runtime_error("ERROR: Undefined property '%s'.", name.as.String);
             return INTERPRET_RUNTIME_ERR;
@@ -809,7 +807,7 @@ Interpretation run(void)
             if (!call_value(machine.e2, argc))
                 return INTERPRET_RUNTIME_ERR;
 
-            machine.e2 = null_obj();
+            // machine.e2 = null_obj();
             frame = (machine.frames + (machine.frame_count - 1));
             machine.argc = (argc == 0) ? 1 : argc;
             machine.cargc = 1;
@@ -947,6 +945,9 @@ Interpretation run(void)
             }
             else
                 machine.e1 = el;
+
+            if (el.type == INSTANCE)
+                machine.e3 = el;
 
             if (READ_BYTE())
                 PUSH(el);
