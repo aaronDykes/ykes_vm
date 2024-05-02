@@ -289,7 +289,12 @@ static bool call_value(Element el, uint8_t argc)
         machine.stack->top -= (argc + 1);
 
         if (res.type == ARENA)
-            machine.r1 = res.arena;
+        {
+            if (res.arena.type == ARENA_BOOL)
+                machine.r5 = res.arena;
+            else
+                machine.r1 = res.arena;
+        }
         push(&machine.stack, res);
         return true;
     }

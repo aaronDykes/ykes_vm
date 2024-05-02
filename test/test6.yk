@@ -6,11 +6,16 @@ import "functions/prime.yk";
 import "oop/CoffeeMaker.yk";
 import "oop/Scone.yk";
 import "functions/fib.yk";
+import "functions/nprime.yk";
 import "./test3.yk";
 
 
 // var scone = Scone();
 // var maker = CoffeeMaker("coffee and chicory");
+
+var np = NP();
+
+np.res();
 
 // var p = Prime();
 // var fb = Fizzbang();
@@ -20,7 +25,8 @@ import "./test3.yk";
 // var tab = Tables();
 // maker.brew();
 // var fib = FIB();
-var z = Zoo();
+// var z = Zoo();
+
 
 // var b = Blue(
 //     "/Users/kern/virtual_machine/test/test1.yk",

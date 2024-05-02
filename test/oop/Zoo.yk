@@ -22,16 +22,22 @@ class Zoo
     res()
     {
 
-        while (this.sum < 10000000000) {
-            this.sum = this.sum + this.ant()
+        var start = clock();
+        var sum = 0;
+
+        while (sum < 10000000) {
+            sum += this.ant()
                 + this.banana()
                 + this.tuna()
                 + this.hay()
                 + this.grass()
                 + this.mouse();
         }
+
+
+        pout(clock() - start);
         pout(
-            this.sum
+            sum
         );
 
     }
