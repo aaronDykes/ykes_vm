@@ -2,6 +2,8 @@
 sr twod_ar()
 {
 
+    var s = Stack(); 
+
     var size_ar = Array(["vector", "of", "vectors"]);
 
 
