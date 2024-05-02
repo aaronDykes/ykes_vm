@@ -704,7 +704,7 @@ Interpretation run(void)
 
             if (res.type != NULL_OBJ)
             {
-                machine.e3 = res;
+                machine.e1 = res;
                 break;
             }
             return INTERPRET_RUNTIME_ERR;

@@ -12,6 +12,7 @@ sr loc()
 
     each(var i : hello)
         pout(i, i.len);
+
     rm(hello);
 
 }
