@@ -222,9 +222,13 @@ static void class_declaration(Compiler *c)
     consume(TOKEN_ID, "ERROR: Expect class name.", &c->parser);
 
     Arena ar = parse_id(c);
-    Class *classc = class(ar);
-    classc->fields = GROW_TABLE(NULL, STACK_SIZE);
-    ClassCompiler *class = ALLOC(sizeof(ClassCompiler));
+    Class *classc = NULL;
+    Instance *inst = NULL;
+    classc = class(ar);
+
+    ClassCompiler *class = NULL;
+    // classc->fields = GROW_TABLE(NULL, STACK_SIZE);
+    class = ALLOC(sizeof(ClassCompiler));
 
     write_table(c->base->classes, classc->name, OBJ(Int(c->base->class_count++)));
     c->base->instances[c->base->class_count - 1] = classc;
@@ -233,18 +237,20 @@ static void class_declaration(Compiler *c)
     class->enclosing = c->class_compiler;
     c->class_compiler = class;
 
-    emit_3_bytes(c, OP_CLASS, add_constant(&c->func->ch, INSTANCE(instance(classc))));
+    inst = instance(classc);
+    inst->fields = GROW_TABLE(NULL, STACK_SIZE);
+    emit_3_bytes(c, OP_CLASS, add_constant(&c->func->ch, INSTANCE(inst)));
 
     consume(TOKEN_CH_LCURL, "ERROR: Expect ze `{` curl brace", &c->parser);
 
     while (!check(TOKEN_CH_RCURL, &c->parser) && !check(TOKEN_EOF, &c->parser))
-        method(c, classc);
+        method(c, inst);
 
     consume(TOKEN_CH_RCURL, "ERROR: Expect ze `}` curl brace", &c->parser);
     c->class_compiler = c->class_compiler->enclosing;
 }
 
-static void method(Compiler *c, Class *class)
+static void method(Compiler *c, Instance *class)
 {
     consume(TOKEN_ID, "ERROR: Expect method identifier.", &c->parser);
     Arena ar = parse_func_id(c);
@@ -257,7 +263,7 @@ static void method(Compiler *c, Class *class)
     method_body(c, type, ar, &class);
 }
 
-static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
+static void method_body(Compiler *c, ObjType type, Arena ar, Instance **class)
 {
     Compiler co;
     init_compiler(&co, c, type, ar);
@@ -289,7 +295,7 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
     end_scope(c);
 
     if (type == INIT)
-        (*class)->init = clos;
+        (*class)->classc->init = clos;
 
     c = c->enclosing;
 

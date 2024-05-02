@@ -14,7 +14,7 @@ sr maf()
     hello=hello+5;
     hello++;
 
-    var bool=hello==1061;
+    var bool=hello==1061 || hello < 120;
 
     var s1 = "this";
     var s2="another";

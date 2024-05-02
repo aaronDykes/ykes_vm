@@ -773,7 +773,7 @@ Interpretation run(void)
             Arena name = READ_CONSTANT().arena;
             // machine.e3 = inst;
 
-            write_table(machine.e3.instance->classc->fields, name, el);
+            write_table(machine.e3.instance->fields, name, el);
             break;
         }
         case OP_GET_PROP:
@@ -786,7 +786,7 @@ Interpretation run(void)
             }
             Arena name = READ_CONSTANT().arena;
 
-            Element n = find_entry(&machine.e3.instance->classc->fields, &name);
+            Element n = find_entry(&machine.e3.instance->fields, &name);
 
             if (n.type != ARENA)
                 // machine.e1 = n;

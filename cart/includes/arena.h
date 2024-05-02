@@ -388,12 +388,12 @@ struct Class
 {
     Closure *init;
     Arena name;
-    Table *fields;
 };
 
 struct Instance
 {
     Class *classc;
+    Table *fields;
 };
 
 struct Stack

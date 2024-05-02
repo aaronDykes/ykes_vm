@@ -5,18 +5,39 @@ sr twod_ar()
     var s = Stack(); 
 
     var size_ar = Array(["vector", "of", "vectors"]);
+    var cp_ar = Array(size_ar);
 
+
+    s.push(size_ar);
+    // s.push(cp_ar);
+
+    each (var i : s)
+    {
+        pout(i);
+
+        for (var j = 0; j < i.len; j++)
+            pout(i[j]);
+
+    }
+    
+
+    // pout(s[0][2]);
+
+    // var another = size_ar[0];
+
+    // each (var i : another)
+        // pout(i);
 
     // pout(size_ar, size_ar.len);
 
-    var len = size_ar.len;
+    // var len = size_ar.len;
 
-    for (var i = 0; i < len; i++)
-        pout(size_ar[i], size_ar[i].len);
+    // for (var i = 0; i < len; i++)
+    //     pout(size_ar[i], size_ar[i].len);
 
 
-    each(var i : size_ar)
-        pout(i, i.len);
+    // each(var i : size_ar)
+    //     pout(i, i.len);
 
 
 

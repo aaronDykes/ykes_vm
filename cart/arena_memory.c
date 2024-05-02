@@ -710,7 +710,6 @@ Class *class(Arena name)
     c = ALLOC(sizeof(Class));
     c->name = name;
     c->init = NULL;
-    c->fields = NULL;
     return c;
 }
 
@@ -718,7 +717,7 @@ void free_class(Class *c)
 {
 
     ARENA_FREE(&c->name);
-    arena_free_table(c->fields);
+    // arena_free_table(c->fields);
     FREE(PTR(c));
 }
 
@@ -727,11 +726,13 @@ Instance *instance(Class *classc)
     Instance *ic = NULL;
     ic = ALLOC(sizeof(Instance));
     ic->classc = classc;
+    ic->fields = NULL;
     return ic;
 }
 void free_instance(Instance *ic)
 {
     FREE(PTR(ic));
+    arena_free_table(ic->fields);
     ic = NULL;
 }
 

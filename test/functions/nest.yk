@@ -24,8 +24,6 @@ class Nest
     pout(this.geta() + this.getb() + this.getc());
   }
   
-
-
 }
 
 

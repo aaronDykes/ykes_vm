@@ -1,38 +1,37 @@
-// import "functions/fizzbang.yk";
+import "functions/fizzbang.yk";
 // import "test1.yk";
-// import "functions/nest.yk";
-// import "oop/Zoo.yk";
+import "functions/nest.yk";
+import "oop/Zoo.yk";
 import "functions/prime.yk";
 import "oop/CoffeeMaker.yk";
 import "oop/Scone.yk";
-// import "functions/fib.yk";
-// import "test3.yk";
+import "functions/fib.yk";
+import "./test3.yk";
 
 
 // var scone = Scone();
 // var maker = CoffeeMaker("coffee and chicory");
-// scone.topping("strawberries ", "cream", 69); 
 
-var p = Prime();
+// var p = Prime();
 // var fb = Fizzbang();
-// var nt = Nest(69, 69, 420);
+// p.res();
+// var nt = Nest(420, 69, 420);
 // nt.sum();
-// pout();
 // var tab = Tables();
 // maker.brew();
 // var fib = FIB();
-// var z = Zoo();
+var z = Zoo();
 
 // var b = Blue(
-//     "/Users/kern/ykes/test/test1.yk",
-//     "/Users/kern/ykes/test/test8.yk"
+//     "/Users/kern/virtual_machine/test/test1.yk",
+//     "/Users/kern/virtual_machine/test/test8.yk"
 // );
 // b.file_read_write();
 
-p.res();
 // fb.fb();
 // fib.res();
 // pout(nt.sum());
 // tab.tables();
 // z.res();
+// scone.topping("strawberries ", "cream", 69); 
 
