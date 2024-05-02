@@ -1421,9 +1421,13 @@ static void stack_alloc(Compiler *c)
     {
         s = GROW_STACK(NULL, STACK_SIZE);
         arg = add_constant(&c->func->ch, STK(s));
+        emit_3_bytes(c, OP_MOV_CNT_E2, arg);
+        if (c->scope_depth > 0)
+            emit_byte(c, OP_STR_E2);
+        return;
     }
 
-    else if (match(TOKEN_INT, &c->parser))
+    if (match(TOKEN_INT, &c->parser))
     {
         s = stack(atoi(c->parser.pre.start));
         arg = add_constant(&c->func->ch, STK(s));
@@ -1433,6 +1437,8 @@ static void stack_alloc(Compiler *c)
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after Stack allocation", &c->parser);
     emit_3_bytes(c, OP_MOV_CNT_E2, arg);
+    if (c->scope_depth > 0)
+        emit_byte(c, OP_STR_E2);
 }
 
 static void table(Compiler *c)
