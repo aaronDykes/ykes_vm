@@ -290,6 +290,13 @@ int disassemble_instruction(Chunk *c, int offset)
     case OP_STR_R5:
         return simple_instruction("OP_STR_R5", offset);
 
+    case OP_STR_E1:
+        return simple_instruction("OP_STR_E1", offset);
+    case OP_STR_E2:
+        return simple_instruction("OP_STR_E2", offset);
+    case OP_STR_E3:
+        return simple_instruction("OP_STR_E3", offset);
+
     case OP_MOV_CNT_R1:
         return byte_instruction("OP_MOV_CNT_R1", c, offset);
     case OP_MOV_CNT_R2:

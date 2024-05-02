@@ -208,6 +208,7 @@ typedef enum
 
     OP_STR_E1,
     OP_STR_E2,
+    OP_STR_E3,
 
     OP_ZERO_ARENA_REGISTERS,
     OP_ZERO_R1,

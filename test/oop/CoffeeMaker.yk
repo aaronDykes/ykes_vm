@@ -5,7 +5,7 @@ class CoffeeMaker
     init(coffee)
     {
         this.coffee = coffee;
-        this.coffee += "blend. It very nice brew";
+        this.coffee += " blend. It very nice brew";
     }
 
     brew() 

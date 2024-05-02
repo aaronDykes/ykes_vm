@@ -1601,6 +1601,24 @@ static void pop_array_val(Compiler *c)
     consume(TOKEN_CH_RPAREN, "Expect `)` after push expression.", &c->parser);
 }
 
+static void _this(Compiler *c)
+{
+    if (!c->class_compiler)
+    {
+        error("ERROR: can't use `this` keyword outside of a class body.", &c->parser);
+        return;
+    }
+
+    int arg = resolve_instance(c, c->class_compiler->instance_name);
+
+    emit_3_bytes(
+        c, OP_GET_CLASS,
+        arg);
+
+    emit_byte(c, OP_MOV_E2_E3);
+    // emit_byte(c, OP_STR_E2);
+}
+
 static void dot(Compiler *c)
 {
     match(TOKEN_ID, &c->parser);
@@ -1643,11 +1661,9 @@ static void dot(Compiler *c)
     else if (match(TOKEN_ADD_ASSIGN, &c->parser))
     {
 
-        // emit_byte(c, OP_PUSH_TOP);
-
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
-        emit_byte(c, OP_MOV_R1);
+        // emit_byte(c, OP_MOV_R1);
 
         c->first_expr = true;
         expression(c);
@@ -1656,10 +1672,9 @@ static void dot(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_ADD, OP_STR_R1);
-        emit_byte(c, OP_MOV_R1_E1);
+        emit_byte(c, (c->scope_depth > 0) ? OP_ADD_LOCAL : OP_ADD);
+        // emit_byte(c, OP_MOV_R1_E1);
 
-        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_SUB_ASSIGN, &c->parser))
@@ -1681,7 +1696,6 @@ static void dot(Compiler *c)
         emit_bytes(c, OP_SUB, OP_STR_R1);
         emit_byte(c, OP_MOV_R1_E1);
 
-        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_MUL_ASSIGN, &c->parser))
@@ -1703,7 +1717,6 @@ static void dot(Compiler *c)
         emit_bytes(c, OP_MUL, OP_STR_R1);
         emit_byte(c, OP_MOV_R1_E1);
 
-        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_DIV_ASSIGN, &c->parser))
@@ -1795,6 +1808,8 @@ static void dot(Compiler *c)
     {
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_3_bytes(c, OP_GET_PROP, cst);
+        // if (c->scope_depth > 0)
+        // emit_byte(c, OP_STR_E1);
     }
 
     c->first_expr = false;
@@ -1934,24 +1949,6 @@ static void _access(Compiler *c)
         emit_byte(c, (c->scope_depth > 0) ? OP_GET_LOCAL_ACCESS : OP_GET_GLOB_ACCESS);
 }
 
-static void _this(Compiler *c)
-{
-    if (!c->class_compiler)
-    {
-        error("ERROR: can't use `this` keyword outside of a class body.", &c->parser);
-        return;
-    }
-
-    int arg = resolve_instance(c, c->class_compiler->instance_name);
-
-    emit_3_bytes(
-        c, OP_GET_CLASS,
-        arg);
-
-    if (c->scope_depth > 0)
-        emit_byte(c, OP_STR_E2);
-}
-
 static void id(Compiler *c)
 {
     bool pre_inc = (c->parser.pre.type == TOKEN_OP_INC);
@@ -1966,6 +1963,7 @@ static void id(Compiler *c)
     if (arg != -1)
     {
         emit_3_bytes(c, OP_GET_CLOSURE, arg);
+
         if (c->scope_depth > 0)
             emit_byte(c, OP_STR_E2);
         return;
@@ -1976,13 +1974,15 @@ static void id(Compiler *c)
 
         if (c->base->instances[arg]->init)
         {
-            int cst = add_constant(&c->func->ch, CLOSURE(c->base->instances[arg]->init));
-            emit_3_bytes(c, OP_CONSTANT, cst);
-            match(TOKEN_CH_LPAREN, &c->parser);
+            Closure *clos = c->base->instances[arg]->init;
+            int cst = add_constant(&c->func->ch, CLOSURE(clos));
+            emit_3_bytes(c, OP_MOV_CNT_E2, cst);
+
+            consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
             call(c);
         }
         emit_3_bytes(c, OP_GET_CLASS, arg);
-        emit_byte(c, OP_MOV_E2_E1);
+        emit_byte(c, OP_MOV_E2_E3);
         if (c->scope_depth > 0)
             emit_byte(c, OP_STR_E2);
         return;
@@ -2051,7 +2051,6 @@ static void id(Compiler *c)
     {
         emit_3_bytes(c, get, arg);
 
-        emit_byte(c, OP_MOV_R2_R1);
         c->first_expr = true;
         expression(c);
 
@@ -2131,7 +2130,7 @@ static void id(Compiler *c)
     else
     {
         emit_3_bytes(c, get, arg);
-        if (get == OP_GET_GLOBAL && c->scope_depth > 0)
+        if (get == OP_GET_GLOBAL && (c->scope_depth > 0 || c->call_param))
             emit_byte(c, 1);
         else if (get == OP_GET_GLOBAL)
             emit_byte(c, 0);

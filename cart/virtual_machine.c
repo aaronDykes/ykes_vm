@@ -762,34 +762,41 @@ Interpretation run(void)
             break;
         case OP_SET_PROP:
         {
-            // Element el = machine.e1;
-            // Element inst = machine.e2;
-            if (machine.e2.type != INSTANCE)
+            // Element inst = NPEEK(1);
+            Element el = POP();
+            if (machine.e3.type != INSTANCE)
             {
                 runtime_error("ERROR: Can only set properties of an instance.");
                 return INTERPRET_RUNTIME_ERR;
             }
-            write_table(machine.e2.instance->classc->fields, READ_CONSTANT().arena, POP());
-            // POP();
+
+            Arena name = READ_CONSTANT().arena;
+            // machine.e3 = inst;
+
+            write_table(machine.e3.instance->classc->fields, name, el);
             break;
         }
         case OP_GET_PROP:
         {
 
-            if (machine.e2.type != INSTANCE)
+            if (machine.e3.type != INSTANCE)
             {
                 runtime_error("ERROR: Only instances contain properties.");
                 return INTERPRET_RUNTIME_ERR;
             }
-            // POP();
-            // Instance *inst = POP().instance;
             Arena name = READ_CONSTANT().arena;
 
-            Element n = find_entry(&machine.e2.instance->classc->fields, &name);
+            Element n = find_entry(&machine.e3.instance->classc->fields, &name);
 
             if (n.type != NULL_OBJ)
             {
-                machine.e2 = n;
+                if (n.type != ARENA)
+                    // machine.e1 = n;
+                    machine.e2 = n;
+
+                else
+                    PUSH(n);
+                // machine.e1 = OBJ(n.arena);
                 break;
             }
 
@@ -865,11 +872,6 @@ Interpretation run(void)
 
             PUSH(el);
             if (el.type != ARENA)
-                // {
-                //     machine.r2 = machine.r1;
-                //     machine.r1 = el.arena;
-                // }
-                // else
                 machine.e1 = el;
 
             break;
@@ -1152,6 +1154,9 @@ Interpretation run(void)
             break;
         case OP_STR_E2:
             PUSH(machine.e2);
+            break;
+        case OP_STR_E3:
+            PUSH(machine.e3);
             break;
         case OP_RETURN:
         {
