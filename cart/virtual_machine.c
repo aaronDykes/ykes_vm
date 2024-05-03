@@ -931,6 +931,22 @@ Interpretation run(void)
             }
             machine.e2 = TABLE(GROW_TABLE(NULL, machine.r1.as.Int));
             break;
+        case OP_ALLOC_STACK:
+            if (machine.r1.type != ARENA_INT)
+            {
+                runtime_error("ERROR: Table argument must be a numeric value.");
+                return INTERPRET_RUNTIME_ERR;
+            }
+            machine.e2 = STK(GROW_STACK(NULL, machine.r1.as.Int));
+            break;
+        case OP_ALLOC_VECTOR:
+            if (machine.r1.type != ARENA_INT)
+            {
+                runtime_error("ERROR: Table argument must be a numeric value.");
+                return INTERPRET_RUNTIME_ERR;
+            }
+            break;
+            machine.e2 = VECT(GROW_ARENA(NULL, machine.r1.as.Int));
         case OP_GET_GLOBAL:
         {
 
@@ -966,7 +982,7 @@ Interpretation run(void)
             Element el = READ_CONSTANT();
             if (machine.e2.type == NULL_OBJ)
             {
-                if (machine.r5.type != ARENA_NULL)
+                if (machine.r5.type == ARENA_BOOL)
                     machine.r1 = machine.r5;
                 machine.e2 = OBJ(machine.r1);
             }

@@ -197,6 +197,11 @@ int disassemble_instruction(Chunk *c, int offset)
 
     case OP_ALLOC_TABLE:
         return simple_instruction("OP_ALLOC_TABLE", offset);
+
+    case OP_ALLOC_STACK:
+        return simple_instruction("OP_ALLOC_STACK", offset);
+    case OP_ALLOC_VECTOR:
+        return simple_instruction("OP_ALLOC_VECTOR", offset);
     case OP_NULL:
         return simple_instruction("OP_NULL", offset);
     case OP_GET_LOCAL:

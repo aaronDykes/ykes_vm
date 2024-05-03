@@ -49,6 +49,8 @@ typedef enum
     OP_LEN_LOCAL,
 
     OP_ALLOC_TABLE,
+    OP_ALLOC_STACK,
+    OP_ALLOC_VECTOR,
 
     OP_PUSH_ARRAY_VAL,
     OP_POP__ARRAY_VAL,

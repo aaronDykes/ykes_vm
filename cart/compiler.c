@@ -675,6 +675,7 @@ static void switch_statement(Compiler *c)
     Arena args = consume_switch(c);
     bool expect = match(TOKEN_CH_LCURL, &c->parser);
 
+    begin_scope(c);
     emit_byte(c, OP_ZERO_E1);
 
     case_statement(c, args);
@@ -687,21 +688,28 @@ static void switch_statement(Compiler *c)
     if (expect)
         consume(TOKEN_CH_RCURL, "Expect `}` after switch body", &c->parser);
 
+    c->call_param = false;
+
     Element el = OBJ(c->func->ch.cases);
     push_int(&el, c->func->ch.op_codes.count);
+
+    end_scope(c);
 }
 
 static void case_statement(Compiler *c, Arena args)
 {
-    uint8_t get = args.listof.Ints[1];
     uint8_t arg = args.listof.Ints[0];
+    uint8_t get = args.listof.Ints[1];
 
     while (match(TOKEN_CASE, &c->parser))
     {
         expression(c);
         consume(TOKEN_CH_COLON, "Expect `:` prior to case body.", &c->parser);
         emit_3_bytes(c, get, arg);
-        emit_byte(c, OP_SEQ);
+        if (get == OP_GET_GLOBAL)
+            emit_byte(c, 1);
+
+        emit_byte(c, OP_SEQ_LOCAL);
 
         int tr = emit_jump_long(c, OP_JMPC);
         int begin = c->func->ch.op_codes.count;
@@ -1177,13 +1185,6 @@ static void emit_3_bytes(Compiler *c, uint8_t b1, int arg)
     write_chunk(&c->func->ch, LIL_NIB(arg), c->parser.pre.line);
 }
 
-static void emit_constant(Compiler *c, Element el)
-{
-    emit_3_bytes(
-        c, OP_CONSTANT,
-        add_constant(&c->func->ch, el));
-}
-
 static void pi(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Double(M_PI)));
@@ -1395,83 +1396,73 @@ static void array_alloc(Compiler *c)
 }
 static void vector_alloc(Compiler *c)
 {
-    Arena *ar = NULL;
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to vector allocation", &c->parser);
     int arg = 0;
+
     if (match(TOKEN_CH_RPAREN, &c->parser))
-    {
-        ar = GROW_ARENA(NULL, STACK_SIZE);
-        arg = add_constant(&c->func->ch, VECT(ar));
-        emit_3_bytes(c, OP_MOV_CNT_E2, arg);
-        if (c->scope_depth > 0 || c->call_param)
-            emit_byte(c, OP_STR_E2);
-        return;
-    }
+        arg = add_constant(&c->func->ch, OBJ(Int(STACK_SIZE)));
 
     else if (match(TOKEN_INT, &c->parser))
     {
-        ar = GROW_ARENA(NULL, atoi(c->parser.pre.start));
-        arg = add_constant(&c->func->ch, VECT(ar));
+        int n = atoi(c->parser.pre.start);
+        arg = add_constant(&c->func->ch, OBJ(Int(n)));
+        consume(TOKEN_CH_RPAREN, "Expect `)` after vector allocation.", &c->parser);
     }
     else
-        error("ERROR: Invalid expression inside of vector allocation", &c->parser);
+        error("ERROR: Invalid vector allocation", &c->parser);
 
-    consume(TOKEN_CH_RPAREN, "Expect `)` after vector allocation.", &c->parser);
-    emit_3_bytes(c, OP_MOV_CNT_E2, arg);
+    emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+    emit_byte(c, OP_ALLOC_VECTOR);
     if (c->scope_depth > 0 || c->call_param)
         emit_byte(c, OP_STR_E2);
 }
 
 static void stack_alloc(Compiler *c)
 {
-    Stack *s = NULL;
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to stack allocation", &c->parser);
 
     int arg = 0;
 
     if (match(TOKEN_CH_RPAREN, &c->parser))
-    {
-        s = GROW_STACK(NULL, STACK_SIZE);
-        arg = add_constant(&c->func->ch, STK(s));
-        emit_3_bytes(c, OP_MOV_CNT_E2, arg);
-        if (c->scope_depth > 0 || c->call_param)
-            emit_byte(c, OP_STR_E2);
-        return;
-    }
+        arg = add_constant(&c->func->ch, OBJ(Int(STACK_SIZE)));
 
-    if (match(TOKEN_INT, &c->parser))
+    else if (match(TOKEN_INT, &c->parser))
     {
-        s = stack(atoi(c->parser.pre.start));
-        arg = add_constant(&c->func->ch, STK(s));
+        int n = atoi(c->parser.pre.start);
+        arg = add_constant(&c->func->ch, OBJ(Int(n)));
+
+        consume(TOKEN_CH_RPAREN, "Expect `)` after Stack allocation", &c->parser);
     }
     else
-        error("ERROR: Invalid expression inside of Stack allocation", &c->parser);
+        error("ERROR: Invalid stack allocation", &c->parser);
 
-    consume(TOKEN_CH_RPAREN, "Expect `)` after Stack allocation", &c->parser);
-    emit_3_bytes(c, OP_MOV_CNT_E2, arg);
+    emit_3_bytes(c, OP_MOV_CNT_R1, arg);
+    emit_byte(c, OP_ALLOC_STACK);
     if (c->scope_depth > 0 || c->call_param)
         emit_byte(c, OP_STR_E2);
 }
 
 static void table(Compiler *c)
 {
-    Table *t = NULL;
-    consume(TOKEN_CH_LPAREN, "Expect `(` prior to Table allocation", &c->parser);
+    consume(TOKEN_CH_LPAREN, "Expect `(` prior to table allocation", &c->parser);
+
+    int cst = 0;
 
     if (match(TOKEN_CH_RPAREN, &c->parser))
+        cst = add_constant(&c->func->ch, OBJ(Int(STACK_SIZE)));
+    else if (match(TOKEN_INT, &c->parser))
     {
-        t = GROW_TABLE(NULL, STACK_SIZE);
-        int cst = add_constant(&c->func->ch, TABLE(t));
-        emit_3_bytes(c, OP_MOV_CNT_E2, cst);
+        int n = atoi(c->parser.pre.start);
+        cst = add_constant(&c->func->ch, OBJ(Int(n)));
+        consume(TOKEN_CH_RPAREN, "Expect `)` after table declaration", &c->parser);
     }
     else
-    {
-        expression(c);
-        emit_byte(c, OP_ALLOC_TABLE);
-        consume(TOKEN_CH_RPAREN, "Expect `)` after Table declaration", &c->parser);
-    }
+        error("ERROR: Invalid table allocation", &c->parser);
 
-    if (c->scope_depth > 0)
+    emit_3_bytes(c, OP_MOV_CNT_R1, cst);
+    emit_byte(c, OP_ALLOC_TABLE);
+
+    if (c->scope_depth > 0 || c->call_param)
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1559,15 +1550,21 @@ static Arena get_id(Compiler *c)
     else if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
         expression(c);
+
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
+
         emit_3_bytes(c, set, arg);
     }
     else
     {
-        emit_bytes(c, get, arg);
+        emit_3_bytes(c, get, arg);
+        if (get == OP_GET_GLOBAL && (c->scope_depth > 0 || c->call_param))
+            emit_byte(c, 1);
+        else if (get == OP_GET_GLOBAL)
+            emit_byte(c, 0);
 
         if (check(TOKEN_CH_DOT, &c->parser))
             c->array_set = set,

@@ -1,35 +1,32 @@
 
-if (69 == 69)
+var hello="str";
+ 
+switch (hello)
 {
-    var hello="str";
-    
-    switch (hello)
+    case "false":
     {
-        case "false":
-        {
-            var h = "right on: ";
-            pout h + "this is pretty lame bro";
-        }
-        case "fag":
-        {
-            var h = "right on: ";
-            pout h + "this is pretty lame bro";
-        } 
-        case "str":
-        {
-            var v = "okay sure: ";
-            pout v + "it actually works";
-        } 
-        default:
-            pout "lame"; 
+        var h = "right on: ";
+        pout(h + "this is pretty lame bro");
+    }
+    case "fag":
+    {
+        var h = "right on: ";
+        pout(h + "this is pretty lame bro");
+    } 
+    case "str":
+    {
+        var v = "okay sure: ";
+        pout(v + "it actually works");
+    } 
+    default:
+    {
+        pout("lame");
 
     }
-
-
-
 
 }
 
 
 
-pout "Wow what a wonderful case"; 
+
+pout("Wow what a wonderful case"); 
