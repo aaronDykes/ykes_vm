@@ -7,15 +7,15 @@ import "oop/CoffeeMaker.yk";
 import "oop/Scone.yk";
 import "functions/fib.yk";
 import "functions/nprime.yk";
-import "./test3.yk";
+import "test3.yk";
 
 
 // var scone = Scone();
 // var maker = CoffeeMaker("coffee and chicory");
 
-var np = NP();
+// var np = NP();
 
-np.res();
+// np.res();
 
 // var p = Prime();
 // var fb = Fizzbang();
@@ -28,11 +28,11 @@ np.res();
 // var z = Zoo();
 
 
-// var b = Blue(
-//     "/Users/kern/virtual_machine/test/test1.yk",
-//     "/Users/kern/virtual_machine/test/test8.yk"
-// );
-// b.file_read_write();
+var b = Blue(
+    "/Users/kern/virtual_machine/test/test1.yk",
+    "/Users/kern/virtual_machine/test/test8.yk"
+);
+b.file_read_write();
 
 // fb.fb();
 // fib.res();

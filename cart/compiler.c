@@ -138,7 +138,8 @@ static char *get_name(char *path)
     char *tmp = path + len;
 
     int count;
-    for (count = 0; tmp[-1] != '/'; --tmp, count++)
+    char c = tmp[0];
+    for (count = 0; tmp[-1] != '/' || *tmp == c; --tmp, count++)
         ;
 
     char *file = NULL;
@@ -414,7 +415,6 @@ static void var_dec(Compiler *c)
     Arena ar = parse_id(c);
     int glob = parse_var(c, ar);
 
-    // emit_bytes(c, OP_ZERO_R5, OP_ZERO_E2);
     uint8_t set = 0;
 
     if (glob != -1)
@@ -1402,6 +1402,10 @@ static void vector_alloc(Compiler *c)
     {
         ar = GROW_ARENA(NULL, STACK_SIZE);
         arg = add_constant(&c->func->ch, VECT(ar));
+        emit_3_bytes(c, OP_MOV_CNT_E2, arg);
+        if (c->scope_depth > 0 || c->call_param)
+            emit_byte(c, OP_STR_E2);
+        return;
     }
 
     else if (match(TOKEN_INT, &c->parser))
@@ -1414,6 +1418,8 @@ static void vector_alloc(Compiler *c)
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after vector allocation.", &c->parser);
     emit_3_bytes(c, OP_MOV_CNT_E2, arg);
+    if (c->scope_depth > 0 || c->call_param)
+        emit_byte(c, OP_STR_E2);
 }
 
 static void stack_alloc(Compiler *c)
@@ -1428,7 +1434,7 @@ static void stack_alloc(Compiler *c)
         s = GROW_STACK(NULL, STACK_SIZE);
         arg = add_constant(&c->func->ch, STK(s));
         emit_3_bytes(c, OP_MOV_CNT_E2, arg);
-        if (c->scope_depth > 0)
+        if (c->scope_depth > 0 || c->call_param)
             emit_byte(c, OP_STR_E2);
         return;
     }
@@ -1443,7 +1449,7 @@ static void stack_alloc(Compiler *c)
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after Stack allocation", &c->parser);
     emit_3_bytes(c, OP_MOV_CNT_E2, arg);
-    if (c->scope_depth > 0)
+    if (c->scope_depth > 0 || c->call_param)
         emit_byte(c, OP_STR_E2);
 }
 
