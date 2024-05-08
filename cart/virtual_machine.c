@@ -642,7 +642,9 @@ Interpretation run(void)
             if (el.type == NULL_OBJ)
                 return INTERPRET_RUNTIME_ERR;
 
-            if (el.type != ARENA)
+            if (el.type == CLOSURE)
+                machine.e2 = el;
+            else if (el.type != ARENA)
                 machine.e1 = el;
             else
                 machine.r1 = el.arena;
@@ -851,7 +853,6 @@ Interpretation run(void)
             if (!call_value(machine.e2, argc))
                 return INTERPRET_RUNTIME_ERR;
 
-            // machine.e2 = null_obj();
             frame = (machine.frames + (machine.frame_count - 1));
             machine.argc = (argc == 0) ? 1 : argc;
             machine.cargc = 1;
@@ -941,6 +942,7 @@ Interpretation run(void)
             break;
         case OP_GET_CLOSURE:
             machine.e2 = (machine.call_stack + READ_BYTE())->as;
+            machine.e1 = machine.e2;
             break;
         case OP_GET_NATIVE:
             machine.e2 = (machine.native_calls + READ_BYTE())->as;

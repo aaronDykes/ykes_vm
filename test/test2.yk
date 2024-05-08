@@ -14,9 +14,26 @@ sr stk()
 
 
     each(var i : s)
+    {
         pout(i);
 
 
+        for (var j = 0; j < i.len; j++)
+            pout(i[j], i[j].len);
+
+
+        
+    }
+
+
+    rm(s);
+
 }
 
-stk();
+var s = Stack();
+
+s[0] = stk;
+
+s[0]();
+
+
