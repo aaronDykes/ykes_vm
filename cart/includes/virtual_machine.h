@@ -16,8 +16,8 @@ typedef enum
 struct CallFrame
 {
     Closure *closure;
-    uint8_t *ip;
-    uint8_t *ip_start;
+    uint16_t *ip;
+    uint16_t *ip_start;
     Stack *slots;
 };
 

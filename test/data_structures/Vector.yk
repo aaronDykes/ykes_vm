@@ -1,28 +1,28 @@
-sr twod_ar()
+class Vct
 {
-    var ar = Vector();
-
-    var size_ar = Array(["vector", "of", "vectors"]);
-    var another = Array(["another", "vector", "of", "vectors"]);
-    var last = Array(["wow", "wow", "WOW", "unbelieveable", "another", "vector", "of", "vectors"]);
-
-    ar[0] = size_ar;
-    ar[1] = another;
-    ar[2] = last;
-
-
-    each(var i : ar)
+    vec()
     {
-        pout(i, i.len);
+        var ar = Vector();
+        var size_ar = Array(["vector", "of", "vectors"]);
+        var another = Array(["another", "vector", "of", "vectors"]);
+        var last = Array(["wow", "wow", "WOW", "unbelieveable", "another", "vector", "of", "vectors"]);
 
-        for (var j = 0; j < i.len; j++)
-            pout(i[j]);
+        ar[0] = size_ar;
+        ar[1] = another;
+        ar[2] = last;
+
+
+        each (var i : ar)
+        {
+            pout(i);
+
+            for (var j = 0; j < i.len; j++)
+                pout(i[j], i[j].len);
+
+        }
+
+
+        rm(ar); 
+
     }
-
-
-
-
-    rm(ar); 
 }
-
-twod_ar();

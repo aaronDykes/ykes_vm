@@ -1,27 +1,25 @@
 
-sr twod_ar()
+
+
+class STK
 {
-
-    var s = Stack(); 
-
-    var size_ar = Array(["vector", "of", "vectors"]);
-    var cp_ar = Array(size_ar);
-
-
-    s.push(size_ar);
-
-    each (var i : s)
+    stack_ops()
     {
-        pout(i);
 
-        for (var j = 0; j < i.len; j++)
-            pout(i[j]);
+        var s = Stack(); 
+        var size_ar = Array(["vector", "of", "vectors"]);
+        var cp_ar = Array(["This is", " a", " vector of vectors"]);
+        s.push(cp_ar);
+        s.push(size_ar);
 
+        each (var i : s)
+        {
+            pout(i);
+
+        }
     }
-    
-
 
 
 }
 
-twod_ar();
+stk();

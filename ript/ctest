@@ -8,4 +8,4 @@ mk
 c
 
 # test1
-./ykes ./../test/oop/$1.yk
+./ykes /Users/kern/virtual_machine/test/data_structures/$1.yk

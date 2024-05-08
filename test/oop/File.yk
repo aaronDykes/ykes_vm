@@ -1,5 +1,5 @@
 
-class Blue
+class File
 {
 
     init(read_path, write_path)

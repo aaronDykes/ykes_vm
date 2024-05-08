@@ -58,6 +58,11 @@ Arena arena_init(void *data, size_t size, T type)
         ar.len = (int)size;
         ar.count = 0;
         break;
+    case ARENA_SHORTS:
+        ar.listof.Shorts = data;
+        ar.len = (int)(size / sizeof(uint16_t));
+        ar.count = 0;
+        break;
     case ARENA_STR:
     case ARENA_FUNC:
     case ARENA_VAR:
@@ -371,6 +376,11 @@ Arena arena_realloc(Arena *ar, size_t size, T type)
         if (!ar->listof.Bytes)
             return arena_init(ptr, size, type);
         memcpy(ptr, ar->listof.Bytes, new_size);
+        break;
+    case ARENA_SHORTS:
+        if (!ar->listof.Shorts)
+            return arena_init(ptr, size, type);
+        memcpy(ptr, ar->listof.Shorts, new_size);
         break;
     case ARENA_STR:
     case ARENA_CSTR:
@@ -1032,7 +1042,7 @@ void init_chunk(Chunk *c)
 {
     c->op_codes.len = 0;
     c->op_codes.count = 0;
-    c->op_codes.listof.Bytes = NULL;
+    c->op_codes.listof.Shorts = NULL;
     c->lines.len = 0;
     c->lines.count = 0;
     c->lines.listof.Ints = NULL;
@@ -1050,7 +1060,7 @@ void free_chunk(Chunk *c)
         init_chunk(c);
         return;
     }
-    if (c->op_codes.listof.Bytes)
+    if (c->op_codes.listof.Shorts)
         FREE_ARRAY(&c->op_codes);
     if (c->cases.listof.Ints)
         FREE_ARRAY(&c->cases);

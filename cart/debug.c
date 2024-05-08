@@ -4,7 +4,7 @@
 static int byte_instruction(const char *name, Chunk *chunk,
                             int offset)
 {
-    uint8_t slot = chunk->op_codes.listof.Bytes[offset + 1];
+    uint16_t slot = chunk->op_codes.listof.Shorts[offset];
     printf("%-16s %4d\n", name, slot);
     return offset + 2;
 }
@@ -17,7 +17,7 @@ static int simple_instruction(const char *name, int offset)
 
 static int constant_instruction(const char *name, Chunk *c, int offset)
 {
-    uint8_t constant = c->op_codes.listof.Bytes[offset + 1];
+    uint16_t constant = c->op_codes.listof.Shorts[offset];
 
     printf("%-16s %4d '", name, constant);
     print_line(c->constants[constant].as);
@@ -28,14 +28,13 @@ static int constant_instruction(const char *name, Chunk *c, int offset)
 static int jump_instruction(const char *name, int sign,
                             Chunk *chunk, int offset)
 {
-    uint16_t jump = (uint16_t)((chunk->op_codes.listof.Bytes[offset + 1] << 8) |
-                               (chunk->op_codes.listof.Bytes[offset + 2]));
+    uint16_t jump = chunk->op_codes.listof.Shorts[offset + 1];
 
     printf("%-16s %4d -> %d\n",
            name, offset,
-           offset + 3 + sign * jump);
+           offset + 2 + sign * jump);
 
-    return offset + 3;
+    return offset + 2;
 }
 
 void disassemble_chunk(Chunk *c, const char *name)
@@ -52,14 +51,14 @@ int disassemble_instruction(Chunk *c, int offset)
 
     printf("%d: %04d ", c->lines.listof.Ints[offset], offset);
 
-    switch (c->op_codes.listof.Bytes[offset])
+    switch (c->op_codes.listof.Shorts[offset])
     {
     case OP_CONSTANT:
         return constant_instruction("OP_CONSTANT", c, offset);
     case OP_CLOSURE:
     {
         offset++;
-        uint8_t constant = c->op_codes.listof.Bytes[offset++];
+        uint16_t constant = c->op_codes.listof.Shorts[offset++];
         printf("%-16s %4d ", "OP_CLOSURE", constant);
         print_line(c->constants[constant].as);
 
@@ -68,18 +67,23 @@ int disassemble_instruction(Chunk *c, int offset)
             return offset;
         for (int j = 0; j < clos->upval_count; j++)
         {
-            int isLocal = c->op_codes.listof.Bytes[offset++];
-            int index = c->op_codes.listof.Bytes[offset++];
+            int isLocal = c->op_codes.listof.Shorts[offset++];
+            int index = c->op_codes.listof.Shorts[offset++];
             printf("%04d      |                     %s %d\n",
                    offset - 2, isLocal ? "local" : "upvalue", index);
         }
 
         return offset;
     }
-    case OP_PUSH_ARRAY_VAL:
-        return simple_instruction("OP_PUSH_ARRAY_VAL", offset);
-    case OP_POP__ARRAY_VAL:
-        return simple_instruction("OP_POP__ARRAY_VAL", offset);
+    case OP_PUSH_GLOB_ARRAY_VAL:
+        return simple_instruction("OP_PUSH_GLOB_ARRAY_VAL", offset);
+    case OP_PUSH_LOCAL_ARRAY_VAL:
+        return simple_instruction("OP_PUSH_LOCAL_ARRAY_VAL", offset);
+    case OP_POP_GLOB_ARRAY_VAL:
+        return simple_instruction("OP_POP_GLOB_ARRAY_VAL", offset);
+    case OP_POP_LOCAL_ARRAY_VAL:
+        return simple_instruction("OP_POP_LOCAL_ARRAY_VAL", offset);
+
     case OP_RESET_ARGC:
         return simple_instruction("OP_RESET_ARGC", offset);
     case OP_SET_GLOB_ACCESS:

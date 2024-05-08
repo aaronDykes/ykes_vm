@@ -1,0 +1,22 @@
+sr stk()
+{
+    var s = Stack(); 
+    var size_ar = Array(["vector", "of", "vectors"]);
+    var cp_ar = Array(["This is", " a", " vector of vectors"]);
+    var a = Array(size_ar);
+
+
+
+    s.push(size_ar);
+    s.push(cp_ar);
+    s.push(a);
+
+
+
+    each(var i : s)
+        pout(i);
+
+
+}
+
+stk();

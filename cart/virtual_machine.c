@@ -230,8 +230,8 @@ static bool call(Closure *c, uint8_t argc)
     CallFrame *frame = &machine.frames[machine.frame_count++];
     frame->closure = c;
     frame->closure->upvals = c->upvals;
-    frame->ip = c->func->ch.op_codes.listof.Bytes;
-    frame->ip_start = c->func->ch.op_codes.listof.Bytes;
+    frame->ip = c->func->ch.op_codes.listof.Shorts;
+    frame->ip_start = c->func->ch.op_codes.listof.Shorts;
     frame->slots = machine.stack->top - argc - 1;
     return true;
 }
@@ -434,16 +434,16 @@ Interpretation run(void)
     CallFrame *frame = &machine.frames[machine.frame_count - 1];
 
 #define READ_BYTE() (*frame->ip++)
-#define READ_SHORT() (((READ_BYTE() << 8) & 0xFF) | READ_BYTE() & 0xFF)
-#define READ_CONSTANT() ((frame->closure->func->ch.constants + READ_SHORT())->as)
+// #define READ_BYTE() (((READ_BYTE() << 8) & 0xFF) | READ_BYTE() & 0xFF)
+#define READ_CONSTANT() ((frame->closure->func->ch.constants + READ_BYTE())->as)
 
 #define PEEK() ((machine.stack->top - 1)->as)
 #define NPEEK(N) ((machine.stack->top + (-1 - N))->as)
 #define CPEEK(N) ((machine.call_stack->top + (-1 + -N))->as)
 #define FALSEY() (!machine.r5.as.Bool)
 #define POPN(n) (popn(&machine.stack, n))
-#define LOCAL() ((frame->slots + READ_SHORT())->as)
-#define JUMP() (*(frame->closure->func->ch.cases.listof.Ints + READ_SHORT()))
+#define LOCAL() ((frame->slots + READ_BYTE())->as)
+#define JUMP() (*(frame->closure->func->ch.cases.listof.Ints + READ_BYTE()))
 #define PUSH(ar) (push(&machine.stack, ar))
 #define CPUSH(ar) (push(&machine.call_stack, ar))
 #define PPUSH(ar) (push(&machine.class_stack, ar))
@@ -464,7 +464,7 @@ Interpretation run(void)
         for (Stack *v = machine.stack; v < machine.stack->top; v++)
             print_line(v->as);
         disassemble_instruction(&frame->closure->func->ch,
-                                (int)(frame->ip - frame->closure->func->ch.op_codes.listof.Bytes));
+                                (int)(frame->ip - frame->closure->func->ch.op_codes.listof.Shorts));
 #endif
 
         switch (READ_BYTE())
@@ -487,10 +487,10 @@ Interpretation run(void)
         break;
 
         case OP_GET_UPVALUE:
-            PUSH((*frame->closure->upvals + READ_SHORT())->closed.as);
+            PUSH((*frame->closure->upvals + READ_BYTE())->closed.as);
             break;
         case OP_SET_UPVALUE:
-            ((*frame->closure->upvals + READ_SHORT()))->closed = *(machine.stack->top - 1);
+            ((*frame->closure->upvals + READ_BYTE()))->closed = *(machine.stack->top - 1);
             break;
 
         case OP_NEG:
@@ -515,7 +515,7 @@ Interpretation run(void)
         }
         case OP_INC_LOC:
         {
-            uint8_t index = READ_SHORT();
+            uint8_t index = READ_BYTE();
             Element el = OBJ(_inc((frame->slots + index)->as.arena));
             (frame->slots + index)->as = el;
             machine.r1 = el.arena;
@@ -524,7 +524,7 @@ Interpretation run(void)
         }
         case OP_DEC_LOC:
         {
-            uint8_t index = READ_SHORT();
+            uint8_t index = READ_BYTE();
             Element el = OBJ(_dec((frame->slots + index)->as.arena));
             (frame->slots + index)->as = el;
             machine.r1 = el.arena;
@@ -678,7 +678,6 @@ Interpretation run(void)
             if (machine.e1.type == NULL_OBJ)
                 machine.e1 = OBJ(machine.r1);
 
-            // POP();
             _set_access(POP(), machine.r4, machine.e3);
             break;
         case OP_RESET_ARGC:
@@ -689,7 +688,7 @@ Interpretation run(void)
         {
             // if (machine.e1.type == NULL_OBJ)
             // machine.e1 = OBJ(machine.r1);
-            PUSH(_get_each_access(POP(), machine.cargc++));
+            PUSH(_get_each_access(PEEK(), machine.cargc++));
             break;
         }
         case OP_EACH_ACCESS:
@@ -699,7 +698,7 @@ Interpretation run(void)
             machine.e2 = _get_each_access(machine.e1, machine.cargc++);
             break;
         }
-        case OP_PUSH_ARRAY_VAL:
+        case OP_PUSH_GLOB_ARRAY_VAL:
         {
 
             if (machine.e1.type == NULL_OBJ)
@@ -714,14 +713,54 @@ Interpretation run(void)
             }
             return INTERPRET_RUNTIME_ERR;
         }
-        case OP_POP__ARRAY_VAL:
+        case OP_PUSH_LOCAL_ARRAY_VAL:
         {
-            // Element p = PEEK();
-            // if (p.type == ARENA)
-            //     --p.arena.count;
-            // else
-            //     --p.arena_vector->count;
-            machine.e2 = _pop_array_val(machine.e2);
+
+            Element res = _push_array_val(POP(), machine.e3);
+
+            if (res.type != NULL_OBJ)
+            {
+                machine.e1 = res;
+                break;
+            }
+            return INTERPRET_RUNTIME_ERR;
+        }
+        case OP_POP_LOCAL_ARRAY_VAL:
+        {
+
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+
+            PUSH((machine.e1 = _pop_array_val(machine.e3)));
+
+            break;
+        }
+        case OP_POP_GLOB_ARRAY_VAL:
+        {
+
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+
+            machine.e1 = _pop_array_val(machine.e3);
+
+            if (machine.e3.type == STACK)
+            {
+                Stack **s = &machine.e3.stack;
+
+                --(*s)->count;
+            }
+            else if (machine.e3.type == ARENA)
+            {
+                Arena *a = &machine.e3.arena;
+                --a->count;
+            }
+            else if (machine.e3.type == VECTOR)
+            {
+                Arena **a = &machine.e3.arena_vector;
+                --(*a)->count;
+            }
+
+            // machine.e1 = _pop_array_val(machine.e2);
             // machine.e2 = p;
             break;
         }
@@ -737,19 +776,19 @@ Interpretation run(void)
             machine.r1 = _len(machine.e1);
             break;
         case OP_LEN_LOCAL:
-            // if (machine.e1.type == NULL_OBJ)
-            // machine.e1 = OBJ(machine.r1);
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
             PUSH(OBJ((machine.r1 = _len(POP()))));
             break;
         case OP_NULL:
             break;
         case OP_JMPF:
-            frame->ip += (READ_SHORT() * FALSEY());
+            frame->ip += (READ_BYTE() * FALSEY());
             break;
         case OP_JMPC:
         {
-            uint16_t jump = READ_SHORT();
-            uint16_t offset = READ_SHORT();
+            uint16_t jump = READ_BYTE();
+            uint16_t offset = READ_BYTE();
 
             if (FALSEY())
             {
@@ -833,18 +872,18 @@ Interpretation run(void)
             break;
         }
         case OP_JMPT:
-            frame->ip += (READ_SHORT() * !FALSEY());
+            frame->ip += (READ_BYTE() * !FALSEY());
             break;
         case OP_JMP_NIL:
         {
-            uint16_t offset = READ_SHORT();
+            uint16_t offset = READ_BYTE();
             if (!not_null(machine.e2))
                 frame->ip += offset;
             break;
         }
         case OP_JMP_NIL_LOCAL:
         {
-            uint16_t offset = READ_SHORT();
+            uint16_t offset = READ_BYTE();
             if (!not_null(PEEK()))
                 frame->ip += offset;
             break;
@@ -852,7 +891,7 @@ Interpretation run(void)
 
         case OP_JMP_NOT_NIL:
         {
-            uint16_t offset = READ_SHORT();
+            uint16_t offset = READ_BYTE();
             if (not_null(PEEK()))
                 frame->ip += offset;
 
@@ -860,10 +899,10 @@ Interpretation run(void)
         }
         break;
         case OP_JMP:
-            frame->ip += READ_SHORT();
+            frame->ip += READ_BYTE();
             break;
         case OP_LOOP:
-            frame->ip -= READ_SHORT();
+            frame->ip -= READ_BYTE();
             break;
         case OP_CLOSE_UPVAL:
             close_upvalues(machine.stack->top - 1);
@@ -901,19 +940,19 @@ Interpretation run(void)
                           : PEEK();
             break;
         case OP_GET_CLOSURE:
-            machine.e2 = (machine.call_stack + READ_SHORT())->as;
+            machine.e2 = (machine.call_stack + READ_BYTE())->as;
             break;
         case OP_GET_NATIVE:
-            machine.e2 = (machine.native_calls + READ_SHORT())->as;
+            machine.e2 = (machine.native_calls + READ_BYTE())->as;
             break;
         case OP_GET_NATIVE_LOCAL:
-            machine.e1 = (machine.native_calls + READ_SHORT())->as;
+            machine.e1 = (machine.native_calls + READ_BYTE())->as;
             break;
         case OP_CLASS:
-            PPUSH(INSTANCE(READ_CONSTANT().instance));
+            PPUSH(READ_CONSTANT());
             break;
         case OP_GET_CLASS:
-            machine.e2 = (machine.class_stack + READ_SHORT())->as;
+            machine.e2 = (machine.class_stack + READ_BYTE())->as;
             break;
         case OP_RM:
             if (machine.e1.type == NULL_OBJ)
@@ -945,8 +984,8 @@ Interpretation run(void)
                 runtime_error("ERROR: Table argument must be a numeric value.");
                 return INTERPRET_RUNTIME_ERR;
             }
-            break;
             machine.e2 = VECT(GROW_ARENA(NULL, machine.r1.as.Int));
+            break;
         case OP_GET_GLOBAL:
         {
 
@@ -964,6 +1003,8 @@ Interpretation run(void)
                 machine.r2 = machine.r1;
                 machine.r1 = el.arena;
             }
+            // else if (el.type == VECTOR)
+            // machine.r1 = el.arena_vector;
             else
                 machine.e1 = el;
 
@@ -1238,6 +1279,6 @@ Interpretation run(void)
 #undef NPEEK
 #undef PEEK
 #undef READ_CONSTANT
-#undef READ_SHORT
+// #undefREAD_BYTE
 #undef READ_BYTE
 }

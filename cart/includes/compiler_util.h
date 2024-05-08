@@ -190,9 +190,8 @@ static void current_err(const char *err, Parser *parser);
 static void error(const char *err, Parser *parser);
 static void error_at(Token t, Parser *parser, const char *err);
 
-static void emit_byte(Compiler *c, uint8_t byte);
-static void emit_bytes(Compiler *c, uint8_t b1, uint8_t b2);
-static void emit_3_bytes(Compiler *c, uint8_t b1, int arg);
+static void emit_byte(Compiler *c, int byte);
+static void emit_bytes(Compiler *c, int b1, int b2);
 static void emit_return(Compiler *c);
 
 static void array(Compiler *c);

@@ -7,6 +7,7 @@ typedef enum
 {
 
     ARENA_BYTE,
+
     ARENA_SIZE,
     ARENA_INT,
     ARENA_DOUBLE,
@@ -17,6 +18,8 @@ typedef enum
     ARENA_BOOL,
     ARENA_NULL,
     ARENA_BYTES,
+    ARENA_SHORTS,
+
     ARENA_INTS,
     ARENA_DOUBLES,
     ARENA_LONGS,
@@ -52,8 +55,10 @@ typedef enum
     OP_ALLOC_STACK,
     OP_ALLOC_VECTOR,
 
-    OP_PUSH_ARRAY_VAL,
-    OP_POP__ARRAY_VAL,
+    OP_PUSH_GLOB_ARRAY_VAL,
+    OP_PUSH_LOCAL_ARRAY_VAL,
+    OP_POP_LOCAL_ARRAY_VAL,
+    OP_POP_GLOB_ARRAY_VAL,
     OP_PREPEND_ARRAY_VAL,
 
     OP_CPY_ARRAY,
@@ -260,7 +265,6 @@ typedef struct Value Value;
 typedef struct Arena Arena;
 typedef struct Data Data;
 
-typedef struct ExprType ExprType;
 typedef struct Chunk Chunk;
 typedef struct Function Function;
 typedef struct Closure Closure;
@@ -274,19 +278,10 @@ typedef struct Instance Instance;
 typedef struct Table Table;
 typedef Element (*NativeFn)(int argc, Stack *argv);
 
-struct ExprType
-{
-    Typed type;
-    union
-    {
-        ObjType object;
-        T arena;
-    };
-};
-
 union Vector
 {
     uint8_t *Bytes;
+    uint16_t *Shorts;
     int *Ints;
     double *Doubles;
     long long int *Longs;

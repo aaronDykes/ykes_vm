@@ -1,43 +1,53 @@
-import "functions/fizzbang.yk";
-// import "test1.yk";
-import "functions/nest.yk";
+import "oop/Fizzbang.yk";
+import "oop/Nest.yk";
 import "oop/Zoo.yk";
-import "functions/prime.yk";
+import "oop/Prime.yk";
 import "oop/CoffeeMaker.yk";
 import "oop/Scone.yk";
-import "functions/fib.yk";
-import "functions/nprime.yk";
-import "test3.yk";
+import "oop/FIB.yk";
+import "oop/NPrime.yk";
+import "oop/File.yk";
+import "data_structures/Vector.yk";
 
 
-// var scone = Scone();
+
+
+var v = Vct();
+
+v.vec();
+
+// var s = Stacky();
+// s.res();
+
+
 // var maker = CoffeeMaker("coffee and chicory");
+// var scone = Scone();
 
 // var np = NP();
 
 // np.res();
 
-var p = Prime();
+// var p = Prime();
 // var fb = Fizzbang();
-p.res();
+// p.res();
 // var nt = Nest(420, 69, 420);
 // nt.sum();
 // var tab = Tables();
-// maker.brew();
-var fib = FIB();
+// var fib = FIB();
 // var z = Zoo();
 
 
-// var b = Blue(
+
+// fb.fb();
+// fib.res();
+// var b = File(
 //     "/Users/kern/virtual_machine/test/test1.yk",
 //     "/Users/kern/virtual_machine/test/test8.yk"
 // );
 // b.file_read_write();
-
-fb.fb();
-// fib.res();
 // pout(nt.sum());
 // tab.tables();
 // z.res();
+// maker.brew();
 // scone.topping("strawberries ", "cream", 69); 
 

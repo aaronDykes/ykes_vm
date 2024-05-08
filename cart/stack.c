@@ -1,13 +1,13 @@
 #include "stack.h"
 #include <stdio.h>
 
-void write_chunk(Chunk *c, uint8_t byte, int line)
+void write_chunk(Chunk *c, uint16_t byte, int line)
 {
 
     if (c->op_codes.len < c->op_codes.count + 1)
     {
         c->op_codes.len = GROW_CAPACITY(c->op_codes.len);
-        c->op_codes = GROW_ARRAY(&c->op_codes, c->op_codes.len * sizeof(uint8_t), ARENA_BYTES);
+        c->op_codes = GROW_ARRAY(&c->op_codes, c->op_codes.len * sizeof(uint16_t), ARENA_SHORTS);
     }
 
     if (c->lines.len < c->lines.count + 1)
@@ -17,7 +17,7 @@ void write_chunk(Chunk *c, uint8_t byte, int line)
     }
 
     c->lines.listof.Ints[c->lines.count++] = line;
-    c->op_codes.listof.Bytes[c->op_codes.count++] = byte;
+    c->op_codes.listof.Shorts[c->op_codes.count++] = byte;
 }
 
 int add_constant(Chunk *c, Element ar)
