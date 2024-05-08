@@ -13,10 +13,8 @@ class STK
         s.push(size_ar);
 
         each (var i : s)
-        {
             pout(i);
 
-        }
     }
 
 

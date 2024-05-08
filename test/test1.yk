@@ -8,13 +8,13 @@ import "oop/FIB.yk";
 import "oop/NPrime.yk";
 import "oop/File.yk";
 import "data_structures/Vector.yk";
+import "data_structures/Table.yk";
 
 
 
-
+var t = TAB();
 var v = Vct();
 
-v.vec();
 
 // var s = Stacky();
 // s.res();
@@ -27,14 +27,19 @@ v.vec();
 
 // np.res();
 
-// var p = Prime();
+var p = Prime();
 // var fb = Fizzbang();
-// p.res();
+p.res();
 // var nt = Nest(420, 69, 420);
 // nt.sum();
-// var tab = Tables();
-// var fib = FIB();
+var fib = FIB();
 // var z = Zoo();
+
+fib.res();
+
+
+t.res();
+v.vec();
 
 
 

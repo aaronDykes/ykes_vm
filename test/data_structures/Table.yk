@@ -1,38 +1,45 @@
-sr fun()
+class TAB
 {
 
-    var tab = Table();
+    init()
+    {
 
-    var nest = Table();
-    var another_nest = Table();
+        var tab = Table();
 
-    tab[69.999] = 420 * 10;
-    tab['a'] = "aa";
-    tab["Aaron"] = "Aaron";
-    tab["Dykes"] = "Dykes"; 
-    tab["Table"] = nest;
+        var nest = Table();
+        var another_nest = Table();
 
-    nest["nest"] = "Another!!!";
-    nest["another"] = another_nest;
+        tab[69.999] = 420 * 10;
+        tab['a'] = "aa";
+        tab["Aaron"] = "Aaron";
+        tab["Dykes"] = "Dykes"; 
+        tab["Table"] = nest;
 
-    another_nest["nest"] = "Another nest!!!!";
+        nest["nest"] = "Another!!!";
+        nest["another"] = another_nest;
 
-    var t = Table(); 
+        another_nest["nest"] = "Another nest!!!!";
 
-    t["Table"] = tab; 
+        this.t = Table(); 
 
-    pout(
-        t["Table"][69.999],
-        t["Table"]['a'],
-        t["Table"]["Aaron"],
-        t["Table"]["Dykes"],
-        t["Table"]["Table"]["nest"],
-        t["Table"]["Table"]["another"]["nest"]
-    );
+        this.t["Table"] = tab; 
+
+    }
+
+    res()
+    {
+
+        pout(
+            this.t["Table"][69.999],
+            this.t["Table"]['a'],
+            this.t["Table"]["Aaron"],
+            this.t["Table"]["Dykes"],
+            this.t["Table"]["Table"]["nest"],
+            this.t["Table"]["Table"]["another"]["nest"]
+        );
+    }
 
 }
-
-fun();
 
 
 

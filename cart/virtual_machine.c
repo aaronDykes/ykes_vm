@@ -833,12 +833,12 @@ Interpretation run(void)
             Element n = find_entry(&machine.e3.instance->fields, &name);
 
             if (n.type != ARENA)
-                // machine.e1 = n;
+
+                machine.e1 = n,
                 machine.e2 = n;
 
-            // else
             PUSH(n);
-            // machine.e1 = OBJ(n.arena);
+
             if (n.type != NULL_OBJ)
                 break;
 
