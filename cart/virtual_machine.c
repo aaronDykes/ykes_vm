@@ -1050,8 +1050,8 @@ Interpretation run(void)
                 machine.r2 = machine.r1;
                 machine.r1 = el.arena;
             }
-            // else if (el.type == VECTOR)
-            // machine.r1 = el.arena_vector;
+            else if (el.type == INSTANCE)
+                machine.e4 = el;
             else
                 machine.e1 = el;
 
