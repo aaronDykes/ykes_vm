@@ -36,11 +36,11 @@ typedef enum
 {
     OP_CONSTANT,
     OP_CLOSURE,
+    OP_METHOD,
     OP_PRINT,
     OP_PRINT_LOCAL,
 
     OP_CLASS,
-    OP_GET_INSTANCE,
 
     OP_EACH_ACCESS,
     OP_EACH_LOCAL_ACCESS,
@@ -77,8 +77,8 @@ typedef enum
     OP_GET_CLOSURE,
     OP_GET_METHOD,
     OP_GET_CLASS,
+    OP_GET_INSTANCE,
     OP_GET_NATIVE,
-    OP_GET_NATIVE_LOCAL,
 
     OP_GLOBAL_DEF,
     OP_SET_GLOBAL,
@@ -216,6 +216,9 @@ typedef enum
     OP_STR_E1,
     OP_STR_E2,
     OP_STR_E3,
+    OP_STR_E4,
+
+    OP_MOV_E4_E2,
 
     OP_ZERO_ARENA_REGISTERS,
     OP_ZERO_R1,
@@ -226,7 +229,7 @@ typedef enum
 
     OP_CALL,
     OP_CALL_LOCAL,
-    OP_METHOD,
+    // OP_CALL_LOCAL,
 
     OP_NULL,
 
@@ -385,6 +388,7 @@ struct Class
 {
     Closure *init;
     Arena name;
+    Table *closures;
 };
 
 struct Instance

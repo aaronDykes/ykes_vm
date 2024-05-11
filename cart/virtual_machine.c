@@ -299,9 +299,15 @@ static bool call_value(Element el, uint8_t argc)
         return true;
     }
     case CLASS:
-    case INSTANCE:
-        machine.stack->top[-1 - argc].as = el;
+        machine.e4 = INSTANCE(instance(el.classc));
+        machine.e4.instance->fields = GROW_TABLE(NULL, TABLE_SIZE);
+        machine.stack->top[-1 - argc].as = machine.e4;
         return true;
+    // case INSTANCE:
+    // return true;
+    //     machine.stack->top[-1 - argc].as = el;
+    //     machine.stack->top[-1 - argc].as = el;
+    //     machine.e4 = el;
     default:
         break;
     }
@@ -477,6 +483,17 @@ Interpretation run(void)
         {
             Element e = READ_CONSTANT();
             CPUSH(e);
+
+            for (int i = 0; i < e.closure->upval_count; i++)
+                e.closure->upvals[i] =
+                    (READ_BYTE())
+                        ? capture_upvalue(frame->slots + READ_BYTE())
+                        : frame->closure->upvals[READ_BYTE()];
+        }
+        break;
+        case OP_METHOD:
+        {
+            Element e = READ_CONSTANT();
 
             for (int i = 0; i < e.closure->upval_count; i++)
                 e.closure->upvals[i] =
@@ -809,8 +826,9 @@ Interpretation run(void)
         case OP_SET_PROP:
         {
             // Element inst = NPEEK(1);
+
             Element el = POP();
-            if (machine.e3.type != INSTANCE)
+            if (machine.e4.type != INSTANCE)
             {
                 runtime_error("ERROR: Can only set properties of an instance.");
                 return INTERPRET_RUNTIME_ERR;
@@ -819,20 +837,20 @@ Interpretation run(void)
             Arena name = READ_CONSTANT().arena;
             // machine.e3 = inst;
 
-            write_table(machine.e3.instance->fields, name, el);
+            write_table(machine.e4.instance->fields, name, el);
             break;
         }
         case OP_GET_PROP:
         {
 
-            if (machine.e3.type != INSTANCE)
+            if (machine.e4.type != INSTANCE)
             {
                 runtime_error("ERROR: Only instances contain properties.");
                 return INTERPRET_RUNTIME_ERR;
             }
             Arena name = READ_CONSTANT().arena;
 
-            Element n = find_entry(&machine.e3.instance->fields, &name);
+            Element n = find_entry(&machine.e4.instance->fields, &name);
 
             if (n.type != ARENA)
 
@@ -847,6 +865,32 @@ Interpretation run(void)
             runtime_error("ERROR: Undefined property '%s'.", name.as.String);
             return INTERPRET_RUNTIME_ERR;
         }
+        case OP_GET_METHOD:
+        {
+
+            if (machine.e4.type != INSTANCE)
+            {
+                runtime_error("ERROR: Only instances contain properties.");
+                return INTERPRET_RUNTIME_ERR;
+            }
+            Arena name = READ_CONSTANT().arena;
+
+            Element n = find_entry(&machine.e4.instance->classc->closures, &name);
+
+            if (n.type != ARENA)
+
+                machine.e1 = n,
+                machine.e2 = n;
+
+            PUSH(n);
+
+            if (n.type != NULL_OBJ)
+                break;
+
+            runtime_error("ERROR: Undefined property '%s'.", name.as.String);
+            return INTERPRET_RUNTIME_ERR;
+        }
+        break;
         case OP_CALL:
         {
             uint8_t argc = READ_BYTE();
@@ -947,15 +991,16 @@ Interpretation run(void)
         case OP_GET_NATIVE:
             machine.e2 = (machine.native_calls + READ_BYTE())->as;
             break;
-        case OP_GET_NATIVE_LOCAL:
-            machine.e1 = (machine.native_calls + READ_BYTE())->as;
-            break;
+
         case OP_CLASS:
             PPUSH(READ_CONSTANT());
             break;
         case OP_GET_CLASS:
-            machine.e2 = (machine.class_stack + READ_BYTE())->as;
+
+            machine.e4 = INSTANCE(instance((machine.class_stack + READ_BYTE())->as.classc));
+            machine.e4.instance->fields = GROW_TABLE(NULL, TABLE_SIZE);
             break;
+
         case OP_RM:
             if (machine.e1.type == NULL_OBJ)
                 machine.e1 = OBJ(machine.r1);
@@ -1164,6 +1209,10 @@ Interpretation run(void)
             machine.e3 = machine.e1;
             break;
 
+        case OP_MOV_E4_E2:
+            machine.e2 = machine.e4;
+            break;
+
         case OP_ZERO_ARENA_REGISTERS:
             machine.r1 = Null();
             machine.r2 = Null();
@@ -1222,6 +1271,9 @@ Interpretation run(void)
             break;
         case OP_STR_E3:
             PUSH(machine.e3);
+            break;
+        case OP_STR_E4:
+            PUSH(machine.e4);
             break;
         case OP_RETURN:
         {

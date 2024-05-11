@@ -339,6 +339,8 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_MOV_E2_E3", c, offset);
     case OP_MOV_E3_E2:
         return byte_instruction("OP_MOV_E3_E2", c, offset);
+    case OP_MOV_E4_E2:
+        return byte_instruction("OP_MOV_E4_E2", c, offset);
     case OP_ZERO_E1:
         return byte_instruction("OP_ZERO_E1", c, offset);
     case OP_ZERO_E2:

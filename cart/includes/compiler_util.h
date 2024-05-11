@@ -121,8 +121,8 @@ static void call(Compiler *c);
 static int argument_list(Compiler *c);
 
 static void class_declaration(Compiler *c);
-static void method(Compiler *c, Instance *class);
-static void method_body(Compiler *c, ObjType type, Arena ar, Instance **class);
+static void method(Compiler *c, Class *class);
+static void method_body(Compiler *c, ObjType type, Arena ar, Class **class);
 
 static void func_declaration(Compiler *c);
 static void func_body(Compiler *c, ObjType type, Arena ar);

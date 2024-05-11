@@ -34,11 +34,16 @@ struct vm
 
     Element
         e1,
-        e2, e3; /* functions, instances and data structures */
+        e2,
+        e3,
+        e4; /* functions, instances and data structures */
+
     Arena
         r1,
         r2,
-        r3, r4, r5; /* Everything else */
+        r3,
+        r4,
+        r5; /* Everything else */
 
     CallFrame frames[FRAMES_MAX];
     Stack *stack;

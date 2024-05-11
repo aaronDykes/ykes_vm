@@ -13,7 +13,9 @@ import "data_structures/Table.yk";
 
 
 var t = TAB();
+t.res();
 var v = Vct();
+v.vec();
 
 
 // var s = Stacky();
@@ -27,19 +29,17 @@ var v = Vct();
 
 // np.res();
 
-var p = Prime();
+// var p = Prime();
 // var fb = Fizzbang();
-p.res();
+// p.res();
 // var nt = Nest(420, 69, 420);
 // nt.sum();
-var fib = FIB();
+// var fib = FIB();
 // var z = Zoo();
 
-fib.res();
+// fib.res();
 
 
-t.res();
-v.vec();
 
 
 

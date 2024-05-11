@@ -32,7 +32,7 @@ sr stk()
 
 var s = Stack();
 
-s[0] = stk;
+s.push(stk);
 
 s[0]();
 

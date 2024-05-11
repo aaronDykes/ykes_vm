@@ -224,11 +224,10 @@ static void class_declaration(Compiler *c)
 
     Arena ar = parse_id(c);
     Class *classc = NULL;
-    Instance *inst = NULL;
     classc = class(ar);
+    classc->closures = GROW_TABLE(NULL, STACK_SIZE);
 
     ClassCompiler *class = NULL;
-    // classc->fields = GROW_TABLE(NULL, STACK_SIZE);
     class = ALLOC(sizeof(ClassCompiler));
 
     write_table(c->base->classes, classc->name, OBJ(Int(c->base->class_count++)));
@@ -238,20 +237,18 @@ static void class_declaration(Compiler *c)
     class->enclosing = c->class_compiler;
     c->class_compiler = class;
 
-    inst = instance(classc);
-    inst->fields = GROW_TABLE(NULL, STACK_SIZE);
-    emit_bytes(c, OP_CLASS, add_constant(&c->func->ch, INSTANCE(inst)));
+    emit_bytes(c, OP_CLASS, add_constant(&c->func->ch, CLASS(classc)));
 
     consume(TOKEN_CH_LCURL, "ERROR: Expect ze `{` curl brace", &c->parser);
 
     while (!check(TOKEN_CH_RCURL, &c->parser) && !check(TOKEN_EOF, &c->parser))
-        method(c, inst);
+        method(c, classc);
 
     consume(TOKEN_CH_RCURL, "ERROR: Expect ze `}` curl brace", &c->parser);
     c->class_compiler = c->class_compiler->enclosing;
 }
 
-static void method(Compiler *c, Instance *class)
+static void method(Compiler *c, Class *class)
 {
     consume(TOKEN_ID, "ERROR: Expect method identifier.", &c->parser);
     Arena ar = parse_func_id(c);
@@ -264,7 +261,7 @@ static void method(Compiler *c, Instance *class)
     method_body(c, type, ar, &class);
 }
 
-static void method_body(Compiler *c, ObjType type, Arena ar, Instance **class)
+static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
 {
     Compiler co;
     init_compiler(&co, c, type, ar);
@@ -291,12 +288,12 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Instance **class)
 
     Closure *clos = new_closure(f);
 
-    write_table((*class)->fields, ar, CLOSURE(clos));
+    write_table((*class)->closures, ar, CLOSURE(clos));
 
     end_scope(c);
 
     if (type == INIT)
-        (*class)->classc->init = clos;
+        (*class)->init = clos;
 
     c = c->enclosing;
 
@@ -1601,15 +1598,17 @@ static void _this(Compiler *c)
         error("ERROR: can't use `this` keyword outside of a class body.", &c->parser);
         return;
     }
+}
 
-    int arg = resolve_instance(c, c->class_compiler->instance_name);
+static Closure *resolve_method(Class *c, Arena ar)
+{
 
-    emit_bytes(
-        c, OP_GET_CLASS,
-        arg);
+    Element el = find_entry(&c->closures, &ar);
 
-    emit_byte(c, OP_MOV_E2_E3);
-    // emit_byte(c, OP_STR_E2);
+    if (el.type == CLOSURE)
+        return el.closure;
+
+    return NULL;
 }
 
 static void dot(Compiler *c)
@@ -1622,7 +1621,6 @@ static void dot(Compiler *c)
     {
         emit_byte(c, OP_MOV_E1_E3);
         emit_bytes(c, (c->scope_depth > 0) ? OP_LEN_LOCAL : OP_LEN, OP_ZERO_E1);
-        // emit_byte(c, OP_LEN);
 
         return;
     }
@@ -1803,7 +1801,11 @@ static void dot(Compiler *c)
     else
     {
         int cst = add_constant(&c->func->ch, OBJ(ar));
-        emit_bytes(c, OP_GET_PROP, cst);
+
+        if (check(TOKEN_CH_LPAREN, &c->parser))
+            emit_bytes(c, OP_GET_METHOD, cst);
+        else
+            emit_bytes(c, OP_GET_PROP, cst);
         // if (c->scope_depth > 0)
         // emit_byte(c, OP_STR_E1);
     }
@@ -1968,22 +1970,30 @@ static void id(Compiler *c)
     if ((arg = resolve_instance(c, ar)) != -1)
     {
 
+        emit_bytes(c, OP_GET_CLASS, arg);
+        consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
+
         if (c->base->instances[arg]->init)
         {
             Closure *clos = c->base->instances[arg]->init;
             int cst = add_constant(&c->func->ch, CLOSURE(clos));
             emit_bytes(c, OP_MOV_CNT_E2, cst);
-
-            consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
             if (c->scope_depth > 0)
                 emit_byte(c, OP_STR_E2);
-
             call(c);
         }
-        emit_bytes(c, OP_GET_CLASS, arg);
-        emit_byte(c, OP_MOV_E2_E3);
-        if (c->scope_depth > 0)
-            emit_byte(c, OP_STR_E2);
+        else
+            consume(TOKEN_CH_RPAREN, "Expect `)` after method call.", &c->parser);
+
+        emit_byte(c, OP_MOV_E4_E2);
+
+        // else
+        // consume(TOKEN_CH_RPAREN, "Expect `)` after method call.", &c->parser);
+
+        // consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
+
+        // call(c);
+
         return;
     }
 

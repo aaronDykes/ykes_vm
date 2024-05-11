@@ -719,6 +719,7 @@ Class *class(Arena name)
     Class *c = NULL;
     c = ALLOC(sizeof(Class));
     c->name = name;
+    c->closures = NULL;
     c->init = NULL;
     return c;
 }
@@ -727,7 +728,7 @@ void free_class(Class *c)
 {
 
     ARENA_FREE(&c->name);
-    // arena_free_table(c->fields);
+    arena_free_table(c->closures);
     FREE(PTR(c));
 }
 
