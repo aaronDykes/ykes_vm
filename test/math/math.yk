@@ -12,6 +12,6 @@ pout(bar + (69420 * 69));
 pout(foo);
 pout(foo + 69);
 foo = foo + 69;
-pout foo + 69;
+pout(foo + 69);
 
 pout(6969);

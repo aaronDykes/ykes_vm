@@ -6,6 +6,7 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <math.h>
 #include <unistd.h>
 
@@ -149,6 +150,85 @@ static char *get_name(char *path)
 
     return file;
 }
+
+static void include_dir(Compiler *c, Arena inc)
+{
+#define SIZE(x, y) \
+    strlen(x) + strlen(y)
+
+    DIR *dir = NULL;
+
+    struct dirent *entry;
+
+    char path[CWD_MAX] = {0};
+    inc.as.String[inc.as.len - 1] = '\0';
+    str_cop(path, (char *)c->base->cwd);
+    strcat(path, inc.as.String);
+
+    dir = opendir(path);
+
+    char *prev_str = NULL;
+
+    Arena result = Null();
+
+    consume(TOKEN_CH_SEMI, "Expect `;` at end of include statement.", &c->parser);
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+
+        char f_path[CWD_MAX] = {0};
+
+        str_cop(f_path, (char *)c->base->cwd);
+        strcat(f_path, inc.as.String);
+        strcat(f_path, entry->d_name);
+
+        Arena e = CString(entry->d_name);
+        if (resolve_include(c, e))
+        {
+            error("Double include.", &c->parser);
+            exit(1);
+        }
+        write_table(c->base->includes, e, OBJ(e));
+
+        char *file = read_file(f_path);
+
+        result = (prev_str)
+                     ? GROW_ARRAY(
+                           &result,
+                           SIZE(file, prev_str) + 1,
+                           ARENA_STR)
+                     : CString(file);
+
+        if (prev_str)
+            strcat(result.as.String, file);
+
+        prev_str = file;
+    }
+    char *remainder = (char *)c->parser.cur.start;
+
+    result = GROW_ARRAY(
+        &result,
+        result.as.len + strlen(remainder),
+        ARENA_STR);
+
+    strcat(result.as.String, remainder);
+
+    init_scanner(result.as.String);
+
+    c->parser.pre = c->parser.cur;
+    c->parser.cur = scan_token();
+
+    if (closedir(dir) != 0)
+    {
+        perror("Unable to close directory");
+        exit(1);
+    }
+
+#undef SIZE
+}
+
 static void include_file(Compiler *c)
 {
 
@@ -165,6 +245,14 @@ static void include_file(Compiler *c)
 
     consume(TOKEN_STR, "Expect file path.", &c->parser);
     Arena inc = CString(parse_string(c));
+
+    char asterisc = inc.as.String[inc.as.len - 1];
+
+    if (asterisc == '*')
+    {
+        include_dir(c, inc);
+        return;
+    }
 
     if (resolve_include(c, inc))
     {
@@ -1600,17 +1688,6 @@ static void _this(Compiler *c)
     }
 }
 
-static Closure *resolve_method(Class *c, Arena ar)
-{
-
-    Element el = find_entry(&c->closures, &ar);
-
-    if (el.type == CLOSURE)
-        return el.closure;
-
-    return NULL;
-}
-
 static void dot(Compiler *c)
 {
     match(TOKEN_ID, &c->parser);
@@ -1667,7 +1744,6 @@ static void dot(Compiler *c)
             null_coalescing_statement(c);
 
         emit_byte(c, (c->scope_depth > 0) ? OP_ADD_LOCAL : OP_ADD);
-        // emit_byte(c, OP_MOV_R1_E1);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1986,13 +2062,6 @@ static void id(Compiler *c)
             consume(TOKEN_CH_RPAREN, "Expect `)` after method call.", &c->parser);
 
         emit_byte(c, OP_MOV_E4_E2);
-
-        // else
-        // consume(TOKEN_CH_RPAREN, "Expect `)` after method call.", &c->parser);
-
-        // consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
-
-        // call(c);
 
         return;
     }

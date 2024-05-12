@@ -2,7 +2,7 @@ class Prime
 {
     is_prime(l)
     {
-        if (l == 9) 
+        if (l == 9)
             return false;
         for (var i = 2; i < square(l); i++)
             if (l % i == 0)

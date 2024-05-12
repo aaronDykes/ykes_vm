@@ -661,6 +661,8 @@ Interpretation run(void)
 
             if (el.type == CLOSURE)
                 machine.e2 = el;
+            else if (el.type == INSTANCE)
+                machine.e4 = el;
             else if (el.type != ARENA)
                 machine.e1 = el;
             else
@@ -683,7 +685,9 @@ Interpretation run(void)
             if (el.type == NULL_OBJ)
                 return INTERPRET_RUNTIME_ERR;
 
-            if (el.type != ARENA)
+            if (el.type == INSTANCE)
+                machine.e4 = el;
+            else if (el.type != ARENA)
                 machine.e1 = el;
             else
                 machine.r1 = el.arena;
@@ -751,6 +755,23 @@ Interpretation run(void)
                 machine.e1 = OBJ(machine.r1);
 
             PUSH((machine.e1 = _pop_array_val(machine.e3)));
+
+            if (machine.e3.type == STACK)
+            {
+                Stack **s = &machine.e3.stack;
+
+                --(*s)->count;
+            }
+            else if (machine.e3.type == ARENA)
+            {
+                Arena *a = &machine.e3.arena;
+                --a->count;
+            }
+            else if (machine.e3.type == VECTOR)
+            {
+                Arena **a = &machine.e3.arena_vector;
+                --(*a)->count;
+            }
 
             break;
         }
@@ -958,26 +979,18 @@ Interpretation run(void)
             Element el = LOCAL();
 
             PUSH(el);
-            if (el.type != ARENA)
+            if (el.type == INSTANCE)
+                machine.e4 = el;
+            else if (el.type != ARENA)
                 machine.e1 = el;
 
             break;
         }
 
         case OP_SET_LOCAL:
-        {
-
-            // if (machine.e2.type == NULL_OBJ)
-            // {
-
-            //     if (machine.r5.type != ARENA_NULL)
-            //         machine.r1 = machine.r5;
-            //     machine.e2 = OBJ(machine.r1);
-            // }
 
             LOCAL() = PEEK();
             break;
-        }
 
         case OP_SET_LOCAL_PARAM:
             LOCAL() = (machine.cargc < machine.argc)

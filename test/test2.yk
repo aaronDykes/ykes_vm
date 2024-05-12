@@ -16,24 +16,21 @@ sr stk()
     each(var i : s)
     {
         pout(i);
-
-
         for (var j = 0; j < i.len; j++)
-            pout(i[j], i[j].len);
-
-
+            pout(i[j]);
         
     }
+
+
+    // pout(s.pop(), s.pop(), s.pop());
 
 
     rm(s);
 
 }
 
-var s = Stack();
 
-s.push(stk);
+stk();
 
-s[0]();
-
-
+"class Prime\n{\n    is_prime(l)\n    {\n        if (l == 9) \n            return false;\n        for (var i = 2; i < square(l); i++)\n            if (l % i == 0)\n                return false;\n        return true;\n    }\n\n    print_prime(n)\n    {\n        for (var i = 3; i < n; i++)\n        {\n            if (this.is_prime(i))\n                pout(i);\n        }\n    }\n\n    res()\n    {\n        var start = clock();\n        this.print_prime(100000);\n        pout(clock() - staclass Zoo\n{\n    init() \n    {\n    \nclass File\n{\n\n    init(read_path, write_path)\n    {\n        this.read_path = read_path;\n        this.write_path = write_path;\n    }\n\n    file_read_write()\n    {\n\n        var str = file(\"r\", this.read_path);\n        pout(str);\n\n        file(\n            \"a\", \n            this.write_path,\n            \"var okay=69420;\"\n        );\n        file(\n            \"a\", \n            this.write_path,\n            \"var right_on=420;\"\n        );\n        \n    }\n\n\n}\n\n\n\n\n"
+// "class Prime\n{\n    is_prime(l)\n    {\n        if (l == 9) \n            return false;\n        for (var i = 2; i < square(l); i++)\n            if (l % i == 0)\n                return false;\n        return true;\n    }\n\n    print_prime(n)\n    {\n        for (var i = 3; i < n; i++)\n        {\n            if (this.is_prime(i))\n                pout(i);\n        }\n    }\n\n    res()\n    {\n        var start = clock();\n        this.print_prime(100000);\n        pout(clock() - staclass Zoo\n{\n    init() \n    {\n    \nclass File\n{\n\n    init(read_path, write_path)\n    {\n        this.read_path = read_path;\n        this.write_path = write_path;\n    }\n\n  ;\n// import \"oop/Fizzbang.yk\";\n// import \"oop/Nest.yk\";\n// import \"oop/Zoo.yk\";\n// import \"oop/Prime.yk\";\n// import \"oop/CoffeeMaker.yk\";\n// import \"oop/Scone.yk\";\n// import \"oop/FIB.yk\";\n// import \"oop/NPrime.yk\";\n// import \"oop/File.yk\";\nimport \"data_structures/Vector.yk\";\nimport \"data_structures/Table.yk\";\n\n\n\nvar t = TAB();\nvar maker = CoffeeMaker(\"coffee and chicory\");\nvar scone = S"...s
