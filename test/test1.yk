@@ -1,7 +1,16 @@
 import "oop/*";
+import "data_structures/*";
 
 
 
-var fi = FIB();
+var p = Prime();
+var s = Stacky();
+var tab = TAB();
+var fib = FIB();
 
-fi.res();
+
+
+p.res();
+fib.res();
+s.res();
+tab.res();

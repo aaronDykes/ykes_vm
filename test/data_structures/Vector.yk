@@ -13,13 +13,9 @@ class Vct
 
 
         each (var i : ar)
-        {
             pout(i);
 
-            for (var j = 0; j < i.len; j++)
-                pout(i[j], i[j].len);
 
-        }
 
 
         rm(ar); 

@@ -1,9 +1,10 @@
 
 
 
-class STK
+class Stacky
 {
-    stack_ops()
+
+    res()
     {
 
         var s = Stack(); 
@@ -15,9 +16,9 @@ class STK
         each (var i : s)
             pout(i);
 
+
+        rm(s);
     }
 
 
 }
-
-stk();
