@@ -557,6 +557,7 @@ Arena CString(const char *str)
     size_t size = strlen(str);
     Arena ar;
     ar.as.String = (char *)str;
+    // ar.as.String[size - 1] = '\0';
     ar.size = size;
     ar.type = ARENA_CSTR;
     ar.as.len = (int)size;

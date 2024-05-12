@@ -197,7 +197,7 @@ static void include_dir(Compiler *c, Arena inc)
         result = (prev_str)
                      ? GROW_ARRAY(
                            &result,
-                           SIZE(file, prev_str) + 1,
+                           SIZE(file, result.as.String),
                            ARENA_STR)
                      : CString(file);
 
@@ -217,7 +217,6 @@ static void include_dir(Compiler *c, Arena inc)
 
     init_scanner(result.as.String);
 
-    c->parser.pre = c->parser.cur;
     c->parser.cur = scan_token();
 
     if (closedir(dir) != 0)
