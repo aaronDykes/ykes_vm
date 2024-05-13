@@ -324,8 +324,15 @@ static int id_type(void)
             case 't':
                 switch (scan.start[2])
                 {
+
                 case 'r':
-                    return check_keyword(3, 3, "ing", TOKEN_TYPE_STRING);
+                    switch (scan.start[3])
+                    {
+                    case 'i':
+                        return check_keyword(4, 2, "ng", TOKEN_TYPE_STRING);
+                    case 's':
+                        return check_keyword(4, 2, "tr", TOKEN_STR_STR);
+                    }
                 case 'a':
                     return check_keyword(3, 2, "ck", TOKEN_TYPE_STACK);
                 }

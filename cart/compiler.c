@@ -394,6 +394,34 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
         emit_byte(c, (uint8_t)tmp->upvalues[i].index);
     }
 }
+static int native_argument_list(Compiler *c)
+{
+    uint8_t argc = 0;
+
+    if (match(TOKEN_CH_RPAREN, &c->parser))
+        return 0;
+    // c->call_param = true;
+    do
+    {
+        expression(c);
+        if (argc == 255)
+            current_err("Cannot pass more than 255 function parameters", &c->parser);
+        argc++;
+
+    } while (match(TOKEN_CH_COMMA, &c->parser));
+
+    // c->call_param = false;
+    consume(TOKEN_CH_RPAREN, "Expect `)` after function args", &c->parser);
+    return argc;
+}
+
+static void call_native(Compiler *c)
+{
+    uint8_t argc = argument_list(c);
+
+    emit_bytes(c, (c->scope_depth > 0) ? OP_CALL_LOCAL : OP_CALL, argc);
+    // emit_bytes(c, OP_CALL, argc);
+}
 
 static void call(Compiler *c)
 {
@@ -1552,7 +1580,7 @@ static void parse_native_var_arg(Compiler *c)
     if (c->scope_depth > 0)
         emit_byte(c, OP_STR_E2);
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to function call", &c->parser);
-    call(c);
+    call_native(c);
 }
 
 static Arena parse_func_id(Compiler *c)
@@ -1733,7 +1761,6 @@ static void dot(Compiler *c)
 
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
-        // emit_byte(c, OP_MOV_R1);
 
         c->first_expr = true;
         expression(c);
@@ -1752,18 +1779,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        emit_byte(c, OP_MOV_R1);
         c->first_expr = true;
-
         expression(c);
-
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_SUB, OP_STR_R1);
-        emit_byte(c, OP_MOV_R1_E1);
+        emit_byte(c, (c->scope_depth > 0) ? OP_SUB_LOCAL : OP_SUB);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1773,18 +1796,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        emit_byte(c, OP_MOV_R1);
         c->first_expr = true;
-
         expression(c);
-
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_MUL, OP_STR_R1);
-        emit_byte(c, OP_MOV_R1_E1);
+        emit_byte(c, (c->scope_depth > 0) ? OP_MUL_LOCAL : OP_MUL);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1794,20 +1813,15 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        emit_byte(c, OP_MOV_R1);
         c->first_expr = true;
-
         expression(c);
-
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_DIV, OP_STR_R1);
-        emit_byte(c, OP_MOV_R1_E1);
+        emit_byte(c, (c->scope_depth > 0) ? OP_DIV_LOCAL : OP_DIV);
 
-        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_MOD_ASSIGN, &c->parser))
@@ -1815,20 +1829,15 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        emit_byte(c, OP_MOV_R1);
         c->first_expr = true;
-
         expression(c);
-
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_MOD, OP_STR_R1);
-        emit_byte(c, OP_MOV_R1_E1);
+        emit_byte(c, (c->scope_depth > 0) ? OP_MOD_LOCAL : OP_MOD);
 
-        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_AND_ASSIGN, &c->parser))
@@ -1837,20 +1846,15 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        emit_byte(c, OP_MOV_R1);
         c->first_expr = true;
-
         expression(c);
-
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_AND, OP_STR_R1);
-        emit_byte(c, OP_MOV_R1_E1);
+        emit_byte(c, (c->scope_depth > 0) ? OP_AND_LOCAL : OP_AND);
 
-        // cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_SET_PROP, cst);
     }
     else if (match(TOKEN_OR__ASSIGN, &c->parser))
@@ -1858,18 +1862,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        emit_byte(c, OP_MOV_R1);
         c->first_expr = true;
-
         expression(c);
-
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_bytes(c, OP_OR, OP_STR_R1);
-        emit_byte(c, OP_MOV_R1_E1);
+        emit_byte(c, (c->scope_depth > 0) ? OP_OR_LOCAL : OP_OR);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1881,8 +1881,6 @@ static void dot(Compiler *c)
             emit_bytes(c, OP_GET_METHOD, cst);
         else
             emit_bytes(c, OP_GET_PROP, cst);
-        // if (c->scope_depth > 0)
-        // emit_byte(c, OP_STR_E1);
     }
 
     c->first_expr = false;
@@ -2087,7 +2085,7 @@ static void id(Compiler *c)
         set = OP_SET_GLOBAL;
     }
 
-    emit_bytes(c, OP_ZERO_EL_REGISTERS, OP_ZERO_R5);
+    emit_bytes(c, OP_ZERO_E1, OP_ZERO_R5);
 
     if (pre_inc)
         emit_bytes(c, get == OP_GET_LOCAL ? OP_INC_LOC : OP_INC_GLO, arg);
@@ -2276,14 +2274,14 @@ static int add_upvalue(Compiler *c, int index, bool islocal)
             return i;
     }
 
-    if (count > LOCAL_COUNT)
+    if (count > UINT16_MAX)
     {
         error("ERROR: To many closure variables in function.", &c->parser);
         return 0;
     }
 
     c->upvalues[c->func->upvalue_count].islocal = islocal;
-    c->upvalues[c->func->upvalue_count].index = (uint8_t)index;
+    c->upvalues[c->func->upvalue_count].index = (uint16_t)index;
     c->upvalue_count++;
     return c->func->upvalue_count++;
 }
@@ -2404,6 +2402,7 @@ Function *compile_path(const char *src, const char *path, const char *name)
     write_table(c.base->natives, CString("square"), OBJ(Int(c.base->native_count++)));
     write_table(c.base->natives, CString("prime"), OBJ(Int(c.base->native_count++)));
     write_table(c.base->natives, CString("file"), OBJ(Int(c.base->native_count++)));
+    write_table(c.base->natives, CString("strstr"), OBJ(Int(c.base->native_count++)));
 
     advance_compiler(&c.parser);
 

@@ -39,6 +39,7 @@ void initVM(void)
     define_native(native_name("square"), square_native);
     define_native(native_name("prime"), prime_native);
     define_native(native_name("file"), file_native);
+    define_native(native_name("strstr"), strstr_native);
 }
 void freeVM(void)
 {
@@ -207,9 +208,36 @@ static inline Element file_native(int argc, Stack *argv)
     }
 }
 
-static inline Element square_native(int argc, Stack *args)
+static inline Element strstr_native(int argc, Stack *argv)
 {
-    return OBJ(_sqr(args->as.arena));
+
+    char *value = strstr(argv->as.arena.as.String, argv[1].as.arena.as.String);
+
+    value[strlen(argv[1].as.arena.as.String)] = '\0';
+    Arena replacement = argv[2].as.arena;
+
+    size_t val_size = strlen(value);
+    size_t rep_size = strlen(replacement.as.String);
+    size_t og_size = strlen(argv->as.arena.as.String);
+
+    argv->as.arena.as.String[og_size - val_size] = '\0';
+
+    char *res = NULL;
+
+    res = ALLOC(og_size - val_size + rep_size);
+
+    strcpy(res, argv->as.arena.as.String);
+
+    strcat(res, replacement.as.String);
+
+    FREE(PTR(argv->as.arena.as.String));
+    argv->as.arena.as.String = res;
+    return OBJ(CString(res));
+}
+
+static inline Element square_native(int argc, Stack *argv)
+{
+    return OBJ(_sqr(argv->as.arena));
 }
 
 static bool call(Closure *c, uint8_t argc)
@@ -279,7 +307,6 @@ static bool call_value(Element el, uint8_t argc)
 {
     switch (el.type)
     {
-
     case CLOSURE:
         return call(el.closure, argc);
     case NATIVE:
@@ -295,7 +322,9 @@ static bool call_value(Element el, uint8_t argc)
             else
                 machine.r1 = res.arena;
         }
+        // machine.stack->top[-1].as = res;
         push(&machine.stack, res);
+        machine.e2 = null_obj();
         return true;
     }
     case CLASS:

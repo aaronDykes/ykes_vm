@@ -75,7 +75,7 @@ struct vm
 //     Table *glob;
 // };
 
-vm machine;
+static vm machine;
 
 void initVM(void);
 void freeVM(void);

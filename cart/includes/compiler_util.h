@@ -316,6 +316,7 @@ static PRule rules[] = {
     [TOKEN_NULL] = {boolean, NULL, PREC_NONE},
 
     [TOKEN_CLOCK] = {parse_native_var_arg, NULL, PREC_CALL},
+    [TOKEN_STR_STR] = {parse_native_var_arg, NULL, PREC_CALL},
     [TOKEN_SQRT] = {parse_native_var_arg, NULL, PREC_CALL},
     [TOKEN_PRIME] = {parse_native_var_arg, NULL, PREC_CALL},
     [TOKEN_FILE] = {parse_native_var_arg, NULL, PREC_CALL},
