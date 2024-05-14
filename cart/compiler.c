@@ -2057,7 +2057,7 @@ static void id(Compiler *c)
         set = OP_SET_GLOBAL;
     }
 
-    emit_bytes(c, OP_ZERO_EL_REGISTERS, OP_ZERO_R5);
+    emit_bytes(c, OP_ZERO_E1, OP_ZERO_R5);
 
     if (pre_inc)
         emit_bytes(c, get == OP_GET_LOCAL ? OP_INC_LOC : OP_INC_GLO, arg);
@@ -2175,6 +2175,7 @@ static void id(Compiler *c)
     }
     else
     {
+        emit_byte(c, OP_ZERO_E2);
         emit_bytes(c, get, arg);
         if (get == OP_GET_GLOBAL && (c->scope_depth > 0 || c->call_param))
             emit_byte(c, 1);

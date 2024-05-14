@@ -325,7 +325,7 @@ static bool call_value(Element el, uint8_t argc)
         }
         // machine.stack->top[-1].as = res;
         push(&machine.stack, res);
-        machine.e2 = null_obj();
+        // machine.e2 = null_obj();
         return true;
     }
     case CLASS:

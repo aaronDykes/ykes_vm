@@ -3,11 +3,11 @@
 
 sr maf()
 {
-    var s="This is a string!!!!!!!";
+    var s="This is a string!!!!string!!!";
+    s = strstr(s, "string!!", "vector");
     s = strstr(s, "string!!", "vector");
 
     pout(s);
-
     rm(s);
 
 
