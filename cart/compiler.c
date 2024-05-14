@@ -394,34 +394,6 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
         emit_byte(c, (uint8_t)tmp->upvalues[i].index);
     }
 }
-static int native_argument_list(Compiler *c)
-{
-    uint8_t argc = 0;
-
-    if (match(TOKEN_CH_RPAREN, &c->parser))
-        return 0;
-    // c->call_param = true;
-    do
-    {
-        expression(c);
-        if (argc == 255)
-            current_err("Cannot pass more than 255 function parameters", &c->parser);
-        argc++;
-
-    } while (match(TOKEN_CH_COMMA, &c->parser));
-
-    // c->call_param = false;
-    consume(TOKEN_CH_RPAREN, "Expect `)` after function args", &c->parser);
-    return argc;
-}
-
-static void call_native(Compiler *c)
-{
-    uint8_t argc = argument_list(c);
-
-    emit_bytes(c, (c->scope_depth > 0) ? OP_CALL_LOCAL : OP_CALL, argc);
-    // emit_bytes(c, OP_CALL, argc);
-}
 
 static void call(Compiler *c)
 {
@@ -1580,7 +1552,7 @@ static void parse_native_var_arg(Compiler *c)
     if (c->scope_depth > 0)
         emit_byte(c, OP_STR_E2);
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to function call", &c->parser);
-    call_native(c);
+    call(c);
 }
 
 static Arena parse_func_id(Compiler *c)
@@ -2085,7 +2057,7 @@ static void id(Compiler *c)
         set = OP_SET_GLOBAL;
     }
 
-    emit_bytes(c, OP_ZERO_E1, OP_ZERO_R5);
+    emit_bytes(c, OP_ZERO_EL_REGISTERS, OP_ZERO_R5);
 
     if (pre_inc)
         emit_bytes(c, get == OP_GET_LOCAL ? OP_INC_LOC : OP_INC_GLO, arg);

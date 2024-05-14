@@ -3,19 +3,18 @@ import "data_structures/*";
 
 
 
-// var p = Prime();
-// var s = Stacky();
-// var tab = TAB();
-// var fib = FIB();
+var p = Prime();
+var s = Stacky();
+var tab = TAB();
+var fib = FIB();
 
 var c = CoffeeMaker("eggs for dinner");
 
+p.res();
+fib.res();
 
+s.res();
+tab.res();
 c.brew();
 
 
-
-// p.res();
-// fib.res();
-// s.res();
-// tab.res();

@@ -213,7 +213,7 @@ static inline Element strstr_native(int argc, Stack *argv)
 
     char *value = strstr(argv->as.arena.as.String, argv[1].as.arena.as.String);
 
-    value[strlen(argv[1].as.arena.as.String)] = '\0';
+    char *append = value + strlen(argv[1].as.arena.as.String);
     Arena replacement = argv[2].as.arena;
 
     size_t val_size = strlen(value);
@@ -224,11 +224,12 @@ static inline Element strstr_native(int argc, Stack *argv)
 
     char *res = NULL;
 
-    res = ALLOC(og_size - val_size + rep_size);
+    res = ALLOC(og_size - val_size + rep_size + strlen(append));
 
     strcpy(res, argv->as.arena.as.String);
 
     strcat(res, replacement.as.String);
+    strcat(res, append);
 
     FREE(PTR(argv->as.arena.as.String));
     argv->as.arena.as.String = res;
@@ -1286,7 +1287,7 @@ Interpretation run(void)
             break;
         case OP_ZERO_EL_REGISTERS:
             machine.e1 = null_obj();
-            machine.e2 = null_obj();
+            // machine.e2 = null_obj();
             break;
 
         case OP_STR_R1:
