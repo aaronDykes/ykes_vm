@@ -87,6 +87,7 @@ struct Compiler
     Arena len;
     Arena ar_push;
     Arena ar_pop;
+    Arena ar_reverse;
 
     const char *cwd;
     const char *current_file;
@@ -320,6 +321,7 @@ static PRule rules[] = {
     [TOKEN_SQRT] = {parse_native_var_arg, NULL, PREC_CALL},
     [TOKEN_PRIME] = {parse_native_var_arg, NULL, PREC_CALL},
     [TOKEN_FILE] = {parse_native_var_arg, NULL, PREC_CALL},
+    // [TOKEN_REVERSE] = {parse_native_var_arg, NULL, PREC_CALL},
 
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},

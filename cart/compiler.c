@@ -1678,6 +1678,13 @@ static void pop_array_val(Compiler *c)
     consume(TOKEN_CH_RPAREN, "Expect `)` after push expression.", &c->parser);
 }
 
+static void reverse_array(Compiler *c)
+{
+    consume(TOKEN_CH_LPAREN, "Expect `(` prior to calling reverse.", &c->parser);
+    emit_byte(c, OP_REVERSE_ARRAY);
+    consume(TOKEN_CH_RPAREN, "Expect `)` after call to reverse.", &c->parser);
+}
+
 static void _this(Compiler *c)
 {
     if (!c->class_compiler)
@@ -1693,6 +1700,12 @@ static void dot(Compiler *c)
 
     Arena ar = parse_id(c);
 
+    if (ar.as.hash == c->base->ar_reverse.as.hash)
+    {
+        emit_byte(c, OP_MOV_E1_E3);
+        reverse_array(c);
+        return;
+    }
     if (ar.as.hash == c->base->len.as.hash)
     {
         emit_byte(c, OP_MOV_E1_E3);
@@ -2069,6 +2082,7 @@ static void id(Compiler *c)
         emit_bytes(c, get == OP_GET_LOCAL ? OP_INC_LOC : OP_INC_GLO, arg);
     else if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
+        emit_byte(c, OP_ZERO_E2);
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -2175,7 +2189,6 @@ static void id(Compiler *c)
     }
     else
     {
-        emit_byte(c, OP_ZERO_E2);
         emit_bytes(c, get, arg);
         if (get == OP_GET_GLOBAL && (c->scope_depth > 0 || c->call_param))
             emit_byte(c, 1);
@@ -2366,6 +2379,7 @@ Function *compile_path(const char *src, const char *path, const char *name)
     c.base->len = CString("len");
     c.base->ar_push = CString("push");
     c.base->ar_pop = CString("pop");
+    c.base->ar_reverse = CString("reverse");
 
     c.parser.panic = false;
     c.parser.err = false;
@@ -2376,6 +2390,7 @@ Function *compile_path(const char *src, const char *path, const char *name)
     write_table(c.base->natives, CString("prime"), OBJ(Int(c.base->native_count++)));
     write_table(c.base->natives, CString("file"), OBJ(Int(c.base->native_count++)));
     write_table(c.base->natives, CString("strstr"), OBJ(Int(c.base->native_count++)));
+    // write_table(c.base->natives, CString("reverse"), OBJ(Int(c.base->native_count++)));
 
     advance_compiler(&c.parser);
 

@@ -2493,3 +2493,43 @@ Arena _prime(Arena a)
     }
     return Bool(true);
 }
+
+static void char_swap(char *c, char *s)
+{
+    char tmp = *c;
+    *c = *s;
+    *s = tmp;
+}
+
+static void str_rev(char *src)
+{
+    char *to = src + strlen(src) - 1;
+    char *from = src;
+
+    for (; from < to; --to, ++from)
+        char_swap(from, to);
+}
+
+Element reverse_native(Element el)
+{
+    if (el.type != ARENA)
+    {
+        log_err("ERROR: invalid argument passed to reverse function.");
+        exit(1);
+    }
+
+    switch (el.arena.type)
+    {
+    case ARENA_STR:
+    case ARENA_CSTR:
+    {
+        char *c = el.arena.as.String;
+        str_rev(c);
+        return OBJ(CString(c));
+    }
+    default:
+        break;
+    }
+
+    return null_obj();
+}

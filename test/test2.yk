@@ -7,12 +7,20 @@ sr maf()
     s = strstr(s, "string!!", "vector");
     s = strstr(s, "string!!", "vector");
 
+    s.reverse();
+
     pout(s);
     rm(s);
 
-
 }
 
-maf();
 
 
+
+
+
+var a = "str";
+
+a = maf;
+
+a();

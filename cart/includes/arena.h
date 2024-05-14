@@ -51,6 +51,8 @@ typedef enum
     OP_LEN,
     OP_LEN_LOCAL,
 
+    OP_REVERSE_ARRAY,
+
     OP_ALLOC_TABLE,
     OP_ALLOC_STACK,
     OP_ALLOC_VECTOR,

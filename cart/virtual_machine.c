@@ -840,6 +840,13 @@ Interpretation run(void)
         case OP_CPY_ARRAY:
             machine.e1 = cpy_array(machine.e1);
             break;
+
+        case OP_REVERSE_ARRAY:
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+            machine.e1 = reverse_native(machine.e1);
+            break;
+
         case OP_LEN:
             if (machine.e1.type == NULL_OBJ)
                 machine.e1 = OBJ(machine.r1);
@@ -1095,11 +1102,9 @@ Interpretation run(void)
             }
             else if (el.type == INSTANCE)
                 machine.e4 = el;
+
             else
                 machine.e1 = el;
-
-            if (el.type == INSTANCE)
-                machine.e3 = el;
 
             if (READ_BYTE())
                 PUSH(el);
@@ -1111,7 +1116,7 @@ Interpretation run(void)
         case OP_GLOBAL_DEF:
         {
             Element el = READ_CONSTANT();
-            if (machine.e2.type == NULL_OBJ)
+            if (machine.e2.type == NULL_OBJ || machine.e2.type == NATIVE)
             {
                 if (machine.r5.type == ARENA_BOOL)
                     machine.r1 = machine.r5;
@@ -1120,6 +1125,7 @@ Interpretation run(void)
 
             if (machine.e2.type == CLOSURE)
                 machine.e2.closure->func->name = el.arena;
+
             WRITE_GLOB(el.arena, machine.e2);
         }
         break;
