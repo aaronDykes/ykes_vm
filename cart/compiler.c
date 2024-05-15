@@ -2429,7 +2429,6 @@ Function *compile_path(const char *src, const char *path, const char *name)
     write_table(c.base->lookup.native, CString("prime"), OBJ(Int(c.base->count.native++)));
     write_table(c.base->lookup.native, CString("file"), OBJ(Int(c.base->count.native++)));
     write_table(c.base->lookup.native, CString("strstr"), OBJ(Int(c.base->count.native++)));
-    // write_table(c.base->lookup.native, CString("reverse"), OBJ(Int(c.base->count.native++)));
 
     advance_compiler(&c.parser);
 

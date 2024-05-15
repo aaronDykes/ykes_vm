@@ -2512,7 +2512,7 @@ static void double_swap(double *c, double *s)
     *c = *s;
     *s = tmp;
 }
-static void long_swap(long *c, long *s)
+static void long_swap(long long int *c, long long int *s)
 {
     long tmp = *c;
     *c = *s;
@@ -2545,8 +2545,8 @@ static void rev(void *src, size_t len, T type)
     }
     case ARENA_LONGS:
     {
-        long *t = (long *)to;
-        long *f = (long *)from;
+        long long int *t = (long long int *)to;
+        long long int *f = (long long int *)from;
         for (; f < t; --t, ++f)
             long_swap(f, t);
         break;
@@ -2589,8 +2589,8 @@ Element reverse_el(Element el)
     }
     case ARENA_LONGS:
     {
-        long *i = el.arena.listof.Longs;
-        rev(i, (el.arena.count - 1) * sizeof(long), el.arena.type);
+        long long int *i = el.arena.listof.Longs;
+        rev(i, (el.arena.count - 1) * sizeof(long long int), el.arena.type);
         el.arena.listof.Longs = i;
         return el;
     }

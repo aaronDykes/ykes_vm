@@ -2,12 +2,9 @@
 #define _COMPILER_UTIL_H
 #include "scanner.h"
 
-#define MAX_ELIF 10
 #define LOCAL_COUNT 500
 #define CALL_COUNT 255
-#define CLASS_COUNT 50
 #define CWD_MAX 1024
-#define PTR_SIZE(X) sizeof(X) / sizeof(X[0])
 
 #define _FLAG_CALL_PARAM_SET 0x01
 #define _FLAG_CALL_PARAM_RST 0x0E
@@ -48,7 +45,6 @@ typedef struct ClassCompiler ClassCompiler;
 typedef void (*parse_fn)(Compiler *);
 typedef struct parse_rule PRule;
 typedef struct Counter Counter;
-typedef struct Flags Flags;
 typedef struct Lookup Lookup;
 typedef struct Hashes Hashes;
 typedef struct CurrentConstant CurrentConstant;
@@ -83,12 +79,6 @@ struct Counter
     int param;
     int class;
     int native;
-};
-
-struct Flags
-{
-    bool first_expr;
-    bool call_param;
 };
 
 struct Lookup
