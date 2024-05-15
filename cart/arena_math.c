@@ -2561,42 +2561,42 @@ static void rev(void *src, size_t len, T type)
     }
 }
 
-Arena reverse_arena(Arena el)
+Element reverse_el(Element el)
 {
 
-    switch (el.type)
+    switch (el.arena.type)
     {
     case ARENA_STR:
     case ARENA_CSTR:
     {
-        char *c = el.as.String;
-        rev(c, el.size - 1, el.type);
-        return CString(c);
+        char *c = el.arena.as.String;
+        rev(c, el.arena.size - 1, el.arena.type);
+        return OBJ(CString(c));
     }
     case ARENA_INTS:
     {
-        int *i = el.listof.Ints;
-        rev(i, (el.count - 1) * sizeof(int), el.type);
-        el.listof.Ints = i;
+        int *i = el.arena.listof.Ints;
+        rev(i, (el.arena.count - 1) * sizeof(int), el.arena.type);
+        el.arena.listof.Ints = i;
         return el;
     }
     case ARENA_DOUBLES:
     {
-        double *i = el.listof.Doubles;
-        rev(i, (el.count - 1) * sizeof(double), el.type);
-        el.listof.Doubles = i;
+        double *i = el.arena.listof.Doubles;
+        rev(i, (el.arena.count - 1) * sizeof(double), el.arena.type);
+        el.arena.listof.Doubles = i;
         return el;
     }
     case ARENA_LONGS:
     {
-        long *i = el.listof.Longs;
-        rev(i, (el.count - 1) * sizeof(long), el.type);
-        el.listof.Longs = i;
+        long *i = el.arena.listof.Longs;
+        rev(i, (el.arena.count - 1) * sizeof(long), el.arena.type);
+        el.arena.listof.Longs = i;
         return el;
     }
     default:
         break;
     }
 
-    return Null();
+    return null_obj();
 }

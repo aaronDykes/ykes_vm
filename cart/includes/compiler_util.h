@@ -134,14 +134,13 @@ struct Compiler
     CurrentConstant current;
     Meta meta;
 
+    Compiler *base;
+    Compiler *enclosing;
     CompilerStacks stack;
+    ClassCompiler *classc;
 
     Function *func;
     Parser parser;
-
-    Compiler *base;
-    Compiler *enclosing;
-    ClassCompiler *class_compiler;
 };
 
 struct parse_rule

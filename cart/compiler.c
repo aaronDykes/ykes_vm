@@ -21,7 +21,7 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
 
     Local *local = NULL;
 
-    a->class_compiler = NULL;
+    a->classc = NULL;
     a->func = NULL;
     a->func = function(name);
 
@@ -56,7 +56,7 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
         a->parser = b->parser;
         a->enclosing = b;
         a->count.scope_depth = b->count.scope_depth;
-        a->class_compiler = b->class_compiler;
+        a->classc = b->classc;
 
         local = &b->stack.local[b->count.local++];
     }
@@ -332,8 +332,8 @@ static void class_declaration(Compiler *c)
     c->base->stack.instance[c->base->count.class - 1] = classc;
     class->instance_name = ar;
 
-    class->enclosing = c->class_compiler;
-    c->class_compiler = class;
+    class->enclosing = c->classc;
+    c->classc = class;
 
     emit_bytes(c, OP_CLASS, add_constant(&c->func->ch, CLASS(classc)));
 
@@ -343,7 +343,7 @@ static void class_declaration(Compiler *c)
         method(c, classc);
 
     consume(TOKEN_CH_RCURL, "ERROR: Expect ze `}` curl brace", &c->parser);
-    c->class_compiler = c->class_compiler->enclosing;
+    c->classc = c->classc->enclosing;
 }
 
 static void method(Compiler *c, Class *class)
@@ -522,6 +522,7 @@ static void var_dec(Compiler *c)
 
     if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
+        emit_byte(c, OP_ZERO_E2);
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -1692,15 +1693,19 @@ static void pop_array_val(Compiler *c)
 static void reverse_array(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to calling reverse.", &c->parser);
-    emit_byte(c, (c->count.scope_depth > 0)
-                     ? OP_REVERSE_LOCAL_ARRAY
-                     : OP_REVERSE_GLOB_ARRAY);
+    if (c->count.scope_depth > 0)
+        emit_byte(c, OP_REVERSE_LOCAL_ARRAY);
+    else
+    {
+        emit_byte(c, OP_REVERSE_GLOB_ARRAY);
+        emit_bytes(c, c->current.array_set, c->current.array_index);
+    }
     consume(TOKEN_CH_RPAREN, "Expect `)` after call to reverse.", &c->parser);
 }
 
 static void _this(Compiler *c)
 {
-    if (!c->class_compiler)
+    if (!c->classc)
     {
         error("ERROR: can't use `this` keyword outside of a class body.", &c->parser);
         return;
@@ -2212,6 +2217,7 @@ static void id(Compiler *c)
             c->current.array_set = set,
             c->current.array_index = arg;
     }
+
     c->flag.first_expr = false;
 }
 

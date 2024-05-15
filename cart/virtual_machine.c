@@ -843,12 +843,12 @@ Interpretation run(void)
 
         case OP_REVERSE_GLOB_ARRAY:
 
-            // if (machine.e1.type == NULL_OBJ)
-            // machine.e1 = OBJ(machine.r1);
-            machine.r1 = reverse_arena(machine.r1);
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+            machine.e2 = reverse_el(machine.e1);
             break;
         case OP_REVERSE_LOCAL_ARRAY:
-            PUSH(OBJ(reverse_arena(POP().arena)));
+            PUSH(reverse_el(POP()));
             break;
 
         case OP_LEN:

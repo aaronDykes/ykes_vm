@@ -1,0 +1,17 @@
+
+
+sr maf()
+{
+
+    var a = [1, 2, 3, 4];
+    var b = [69.9, 420.2, 69.9999, 1.69];
+
+    pout(a, b);
+
+    a.reverse();
+    b.reverse();
+
+    pout(a, b);
+
+}
+maf();
