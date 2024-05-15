@@ -33,8 +33,8 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
     a->count.param = 0;
     a->count.native = 0;
 
-    a->flag.first_expr = false;
-    a->flag.call_param = false;
+    a->flags &= _FLAG_FIRST_EXPR_RST;
+    a->flags &= _FLAG_CALL_PARAM_RST;
 
     a->current.array_index = 0;
     a->current.array_set = 0;
@@ -420,7 +420,7 @@ static int argument_list(Compiler *c)
 
     if (match(TOKEN_CH_RPAREN, &c->parser))
         return 0;
-    c->flag.call_param = true;
+    c->flags |= _FLAG_CALL_PARAM_SET;
     do
     {
         expression(c);
@@ -430,7 +430,7 @@ static int argument_list(Compiler *c)
 
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
-    c->flag.call_param = false;
+    c->flags &= _FLAG_CALL_PARAM_RST;
     consume(TOKEN_CH_RPAREN, "Expect `)` after function args", &c->parser);
     return argc;
 }
@@ -530,7 +530,7 @@ static void var_dec(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        c->flag.first_expr = false;
+        c->flags &= _FLAG_FIRST_EXPR_RST;
 
         emit_bytes(c, set, glob);
     }
@@ -567,7 +567,7 @@ static void synchronize(Parser *parser)
 static void statement(Compiler *c)
 {
 
-    // c->flag.first_expr = false;
+    // c->flags &= _FLAG_FIRST_EXPR_RST;
     if (match(TOKEN_PRINT, &c->parser))
         print_statement(c);
     else if (match(TOKEN_OP_REM, &c->parser))
@@ -640,7 +640,7 @@ static void for_statement(Compiler *c)
     if (!match(TOKEN_CH_SEMI, &c->parser))
     {
         expression(c);
-        c->flag.first_expr = false;
+        c->flags &= _FLAG_FIRST_EXPR_RST;
         consume(TOKEN_CH_SEMI, "Expect `;` after 'for' condition.", &c->parser);
         exit = emit_jump(c, OP_JMPF);
         emit_byte(c, OP_POP);
@@ -651,7 +651,7 @@ static void for_statement(Compiler *c)
         int inc_start = c->func->ch.op_codes.count;
 
         expression(c);
-        c->flag.first_expr = false;
+        c->flags &= _FLAG_FIRST_EXPR_RST;
         emit_byte(c, OP_POP);
         consume(TOKEN_CH_RPAREN, "Expect `)` after 'for' statement.", &c->parser);
 
@@ -680,7 +680,7 @@ static void while_statement(Compiler *c)
     expression(c);
     if (c->count.scope_depth > 0)
         emit_bytes(c, OP_POPN, add_constant(&c->func->ch, OBJ(Int(2))));
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
     consume(TOKEN_CH_RPAREN, "Expect `)` after 'while' condition.", &c->parser);
 
     int exit_jmp = emit_jump(c, OP_JMPF);
@@ -745,14 +745,14 @@ static void consume_if(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after an 'if'.", &c->parser);
     expression(c);
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
     consume(TOKEN_CH_RPAREN, "Expect `)` after an 'if' condtion.", &c->parser);
 }
 static void consume_elif(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after an 'elif'.", &c->parser);
     expression(c);
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after an 'elif' condtion.", &c->parser);
 }
@@ -783,7 +783,7 @@ static void switch_statement(Compiler *c)
     if (expect)
         consume(TOKEN_CH_RCURL, "Expect `}` after switch body", &c->parser);
 
-    c->flag.call_param = false;
+    c->flags &= _FLAG_CALL_PARAM_RST;
 
     Element el = OBJ(c->func->ch.cases);
     push_int(&el, c->func->ch.op_codes.count);
@@ -897,7 +897,7 @@ static void return_statement(Compiler *c)
         if (c->meta.type == INIT)
             error("ERROR: Unable to return value from initializer.", &c->parser);
         expression(c);
-        c->flag.first_expr = false;
+        c->flags &= _FLAG_FIRST_EXPR_RST;
         consume(TOKEN_CH_SEMI, "ERROR: Expect semi colon after return statement.", &c->parser);
         // if (c->count.scope_depth > 0)
         emit_byte(c, OP_RETURN);
@@ -956,7 +956,7 @@ static int emit_jump(Compiler *c, int byte)
 static void default_expression(Compiler *c)
 {
     expression(c);
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
     consume(TOKEN_CH_SEMI, "Expect `;` after expression.", &c->parser);
     emit_byte(c, OP_POP);
 }
@@ -964,7 +964,7 @@ static void default_expression(Compiler *c)
 static void print_statement(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to print expression", &c->parser);
-    // c->flag.first_expr = false;
+    // c->flags &= _FLAG_FIRST_EXPR_RST;
     do
     {
         expression(c);
@@ -974,7 +974,7 @@ static void print_statement(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        c->flag.first_expr = false;
+        c->flags &= _FLAG_FIRST_EXPR_RST;
         if (check(TOKEN_CH_COMMA, &c->parser))
             emit_byte(c, (c->count.scope_depth > 0) ? OP_PRINT_LOCAL : OP_PRINT);
 
@@ -1039,7 +1039,7 @@ static void expression(Compiler *c)
 static void grouping(Compiler *c)
 {
     emit_byte(c, OP_MOV_R1_R3);
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
     expression(c);
     consume(TOKEN_CH_RPAREN, "Expect `)` after expression", &c->parser);
     emit_byte(c, OP_MOV_R3_R2);
@@ -1264,17 +1264,17 @@ static void emit_bytes(Compiler *c, int b1, int b2)
 static void pi(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Double(M_PI)));
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1282,17 +1282,17 @@ static void pi(Compiler *c)
 static void euler(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Double(M_E)));
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1302,18 +1302,18 @@ static void dval(Compiler *c)
     double val = strtod(c->parser.pre.start, NULL);
     int arg = add_constant(&c->func->ch, OBJ(Double(val)));
 
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1322,18 +1322,18 @@ static void ival(Compiler *c)
 
     int arg = add_constant(&c->func->ch, OBJ(Int((atoi(c->parser.pre.start)))));
 
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1341,18 +1341,18 @@ static void llint(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Long(atoll(c->parser.pre.start))));
 
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1360,18 +1360,18 @@ static void ch(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Char(*++c->parser.pre.start)));
 
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1383,18 +1383,18 @@ static void boolean(Compiler *c)
         arg = add_constant(&c->func->ch, OBJ(Null()));
     else
         arg = add_constant(&c->func->ch, OBJ(Bool(*c->parser.pre.start == 't' ? true : false)));
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1409,18 +1409,18 @@ static void cstr(Compiler *c)
 
     int arg = add_constant(&c->func->ch, OBJ(CString(parse_string(c))));
 
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1431,18 +1431,18 @@ static void string(Compiler *c)
     int arg = add_constant(&c->func->ch, OBJ(String(parse_string(c))));
     consume(TOKEN_CH_RPAREN, "Expect `)` after string declaration.", &c->parser);
 
-    if (!c->flag.first_expr)
+    if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1455,7 +1455,7 @@ static void array_alloc(Compiler *c)
     {
         int arg = add_constant(&c->func->ch, OBJ(GROW_ARRAY(NULL, atoi(c->parser.pre.start), ARENA_INTS)));
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || c->flag.call_param)
+        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
             emit_byte(c, OP_STR_R1);
     }
     else if (match(TOKEN_ID, &c->parser))
@@ -1489,7 +1489,7 @@ static void vector_alloc(Compiler *c)
 
     emit_bytes(c, OP_MOV_CNT_R1, arg);
     emit_byte(c, OP_ALLOC_VECTOR);
-    if (c->count.scope_depth > 0 || c->flag.call_param)
+    if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1514,7 +1514,7 @@ static void stack_alloc(Compiler *c)
 
     emit_bytes(c, OP_MOV_CNT_R1, arg);
     emit_byte(c, OP_ALLOC_STACK);
-    if (c->count.scope_depth > 0 || c->flag.call_param)
+    if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1538,7 +1538,7 @@ static void table(Compiler *c)
     emit_bytes(c, OP_MOV_CNT_R1, cst);
     emit_byte(c, OP_ALLOC_TABLE);
 
-    if (c->count.scope_depth > 0 || c->flag.call_param)
+    if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1637,7 +1637,7 @@ static Arena get_id(Compiler *c)
     else
     {
         emit_bytes(c, get, arg);
-        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || c->flag.call_param))
+        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET)))
             emit_byte(c, 1);
         else if (get == OP_GET_GLOBAL)
             emit_byte(c, 0);
@@ -1646,7 +1646,8 @@ static Arena get_id(Compiler *c)
             c->current.array_set = set,
             c->current.array_index = arg;
     }
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
+
     return args;
 }
 
@@ -1675,7 +1676,7 @@ static void push_array_val(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after push.", &c->parser);
     expression(c);
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
     emit_byte(c, (c->count.scope_depth > 0)
                      ? OP_PUSH_LOCAL_ARRAY_VAL
                      : OP_PUSH_GLOB_ARRAY_VAL);
@@ -1765,7 +1766,7 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -1782,7 +1783,7 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -1799,7 +1800,7 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -1816,7 +1817,7 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -1832,7 +1833,7 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -1849,7 +1850,7 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -1865,7 +1866,7 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -1886,7 +1887,7 @@ static void dot(Compiler *c)
             emit_bytes(c, OP_GET_PROP, cst);
     }
 
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
 }
 
 static void int_array(Compiler *c)
@@ -1998,7 +1999,7 @@ static void _access(Compiler *c)
 {
 
     expression(c);
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
 
     consume(TOKEN_CH_RSQUARE, "Expect closing brace after array access.", &c->parser);
 
@@ -2010,7 +2011,7 @@ static void _access(Compiler *c)
 
         emit_byte(c, OP_MOV_R1_R4);
         expression(c);
-        c->flag.first_expr = false;
+        c->flags &= _FLAG_FIRST_EXPR_RST;
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2113,7 +2114,7 @@ static void id(Compiler *c)
     else if (match(TOKEN_ADD_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
 
         expression(c);
 
@@ -2129,7 +2130,7 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, arg);
 
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -2143,7 +2144,7 @@ static void id(Compiler *c)
     {
 
         emit_bytes(c, get, arg);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
 
         expression(c);
 
@@ -2157,7 +2158,7 @@ static void id(Compiler *c)
     else if (match(TOKEN_DIV_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2169,7 +2170,7 @@ static void id(Compiler *c)
     else if (match(TOKEN_MOD_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2182,7 +2183,7 @@ static void id(Compiler *c)
     else if (match(TOKEN_AND_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2195,7 +2196,7 @@ static void id(Compiler *c)
     else if (match(TOKEN_OR__ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->flag.first_expr = true;
+        c->flags |= _FLAG_FIRST_EXPR_SET;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2208,7 +2209,8 @@ static void id(Compiler *c)
     else
     {
         emit_bytes(c, get, arg);
-        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || c->flag.call_param))
+        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET)))
+
             emit_byte(c, 1);
         else if (get == OP_GET_GLOBAL)
             emit_byte(c, 0);
@@ -2218,7 +2220,7 @@ static void id(Compiler *c)
             c->current.array_index = arg;
     }
 
-    c->flag.first_expr = false;
+    c->flags &= _FLAG_FIRST_EXPR_RST;
 }
 
 static int parse_var(Compiler *c, Arena ar)

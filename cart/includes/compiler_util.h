@@ -9,6 +9,12 @@
 #define CWD_MAX 1024
 #define PTR_SIZE(X) sizeof(X) / sizeof(X[0])
 
+#define _FLAG_CALL_PARAM_SET 0x01
+#define _FLAG_CALL_PARAM_RST 0x0E
+
+#define _FLAG_FIRST_EXPR_SET 0x02
+#define _FLAG_FIRST_EXPR_RST 0x0D
+
 struct Parser
 {
     token cur;
@@ -127,7 +133,7 @@ struct CompilerStacks
 struct Compiler
 {
     Counter count;
-    Flags flag;
+    uint8_t flags;
 
     Lookup lookup;
     Hashes hash;
