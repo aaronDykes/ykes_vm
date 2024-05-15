@@ -97,6 +97,8 @@ struct Hashes
     Arena pop;
     Arena reverse;
     Arena remove;
+    Arena sort;
+    Arena bin_search;
 };
 
 struct CurrentConstant

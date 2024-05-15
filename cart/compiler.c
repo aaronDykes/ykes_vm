@@ -1703,6 +1703,35 @@ static void reverse_array(Compiler *c)
     }
     consume(TOKEN_CH_RPAREN, "Expect `)` after call to reverse.", &c->parser);
 }
+static void sort_array(Compiler *c)
+{
+    consume(TOKEN_CH_LPAREN, "Expect `(` prior to calling reverse.", &c->parser);
+    if (c->count.scope_depth > 0)
+        emit_byte(c, OP_SORT_LOCAL_ARRAY);
+    else
+    {
+        emit_bytes(c, OP_ZERO_E2, OP_SORT_GLOB_ARRAY);
+        emit_bytes(c, c->current.array_set, c->current.array_index);
+    }
+    consume(TOKEN_CH_RPAREN, "Expect `)` after call to reverse.", &c->parser);
+}
+
+static void search_array(Compiler *c)
+{
+    emit_byte(c, OP_MOV_R1_R4);
+    consume(TOKEN_CH_LPAREN, "Expect `(` prior to calling reverse.", &c->parser);
+
+    expression(c);
+
+    if (c->count.scope_depth > 0)
+        emit_byte(c, OP_BIN_SEARCH_LOCAL_ARRAY);
+    else
+    {
+        emit_byte(c, OP_BIN_SEARCH_GLOB_ARRAY);
+        // emit_bytes(c, c->current.array_set, c->current.array_index);
+    }
+    consume(TOKEN_CH_RPAREN, "Expect `)` after call to reverse.", &c->parser);
+}
 
 static void _this(Compiler *c)
 {
@@ -1719,10 +1748,23 @@ static void dot(Compiler *c)
 
     Arena ar = parse_id(c);
 
+    if (ar.as.hash == c->base->hash.bin_search.as.hash)
+    {
+        emit_byte(c, OP_MOV_E1_E3);
+        search_array(c);
+        return;
+    }
+
     if (ar.as.hash == c->base->hash.reverse.as.hash)
     {
         emit_byte(c, OP_MOV_E1_E3);
         reverse_array(c);
+        return;
+    }
+    if (ar.as.hash == c->base->hash.sort.as.hash)
+    {
+        emit_byte(c, OP_MOV_E1_E3);
+        sort_array(c);
         return;
     }
     if (ar.as.hash == c->base->hash.len.as.hash)
@@ -2419,6 +2461,8 @@ Function *compile_path(const char *src, const char *path, const char *name)
     c.base->hash.pop = CString("pop");
     c.base->hash.reverse = CString("reverse");
     c.base->hash.remove = CString("remove");
+    c.base->hash.sort = CString("sort");
+    c.base->hash.bin_search = CString("bin_search");
 
     c.parser.panic = false;
     c.parser.err = false;

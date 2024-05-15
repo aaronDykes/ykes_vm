@@ -851,6 +851,19 @@ Interpretation run(void)
             PUSH(reverse_el(POP()));
             break;
 
+        case OP_SORT_GLOB_ARRAY:
+            machine.r1 = sort_arena(machine.r1);
+            break;
+        case OP_SORT_LOCAL_ARRAY:
+            PUSH(OBJ(sort_arena(POP().arena)));
+            break;
+        case OP_BIN_SEARCH_GLOB_ARRAY:
+            machine.r1 = search_arena(machine.r4, machine.r1);
+            break;
+        case OP_BIN_SEARCH_LOCAL_ARRAY:
+            PUSH(OBJ(search_arena(POP().arena, POP().arena)));
+            break;
+
         case OP_LEN:
             if (machine.e1.type == NULL_OBJ)
                 machine.e1 = OBJ(machine.r1);

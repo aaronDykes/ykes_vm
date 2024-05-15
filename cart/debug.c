@@ -373,6 +373,17 @@ int disassemble_instruction(Chunk *c, int offset)
         return simple_instruction("OP_REVERSE_GLOB_ARRAY", offset);
     case OP_REVERSE_LOCAL_ARRAY:
         return simple_instruction("OP_REVERSE_LOCAL_ARRAY", offset);
+
+    case OP_SORT_GLOB_ARRAY:
+        return simple_instruction("OP_SORT_GLOB_ARRAY", offset);
+    case OP_SORT_LOCAL_ARRAY:
+        return simple_instruction("OP_SORT_LOCAL_ARRAY", offset);
+
+    case OP_BIN_SEARCH_GLOB_ARRAY:
+        return simple_instruction("OP_BIN_SEARCH_GLOB_ARRAY", offset);
+    case OP_BIN_SEARCH_LOCAL_ARRAY:
+        return simple_instruction("OP_BIN_SEARCH_LOCAL_ARRAY", offset);
+
     default:
         printf("Unkown opcode: %d\n", offset);
         return ++offset;

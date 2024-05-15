@@ -2600,3 +2600,144 @@ Element reverse_el(Element el)
 
     return null_obj();
 }
+
+int int_cmp(const void *a, const void *b)
+{
+    int *i1 = (int *)a;
+    int *i2 = (int *)b;
+
+    return (*i1 > *i2) ? 1 : -1;
+}
+
+int double_cmp(const void *a, const void *b)
+{
+    double *i1 = (double *)a;
+    double *i2 = (double *)b;
+
+    return (*i1 > *i2) ? 1 : -1;
+}
+
+int long_cmp(const void *a, const void *b)
+{
+    long long int *i1 = (long long int *)a;
+    long long int *i2 = (long long int *)b;
+
+    return (*i1 > *i2) ? 1 : -1;
+}
+
+Arena sort_arena(Arena ar)
+{
+
+    switch (ar.type)
+    {
+    case ARENA_INTS:
+    {
+        int *p = ar.listof.Ints;
+        qsort(p, ar.count, sizeof(int), int_cmp);
+        ar.listof.Ints = p;
+        return ar;
+    }
+    case ARENA_DOUBLES:
+    {
+        double *p = ar.listof.Doubles;
+        qsort(p, ar.count, sizeof(double), double_cmp);
+        ar.listof.Doubles = p;
+        return ar;
+    }
+    case ARENA_LONGS:
+    {
+        long long int *p = ar.listof.Longs;
+        qsort(p, ar.count, sizeof(long long int), long_cmp);
+        ar.listof.Longs = p;
+        return ar;
+    }
+    case ARENA_STRS:
+        return ar;
+    case ARENA_CSTR:
+    case ARENA_STR:
+        return ar;
+    default:
+        return Null();
+    }
+}
+
+static int bin_search_ints(int *base, int key, int n)
+{
+
+    int to = n;
+    int from = 0;
+
+    while (from <= to)
+    {
+        int mid = (to + from) / 2;
+
+        if (base[mid] < key)
+            from = mid + 1;
+        else if (base[mid] > key)
+            to = mid - 1;
+        else
+            return mid;
+    }
+
+    return -1;
+}
+static int bin_search_doubles(double *base, double key, int n)
+{
+
+    int to = n;
+    int from = 0;
+
+    while (from <= to)
+    {
+        int mid = (to + from) / 2;
+
+        if (base[mid] < key)
+            from = mid + 1;
+        else if (base[mid] > key)
+            to = mid - 1;
+        else
+            return mid;
+    }
+
+    return -1;
+}
+static int bin_search_longs(long long int *base, long key, int n)
+{
+
+    int to = n;
+    int from = 0;
+
+    while (from <= to)
+    {
+        int mid = (to + from) / 2;
+
+        if (base[mid] < key)
+            from = mid + 1;
+        else if (base[mid] > key)
+            to = mid - 1;
+        else
+            return mid;
+    }
+
+    return -1;
+}
+
+Arena search_arena(Arena ar, Arena key)
+{
+
+    switch (ar.type)
+    {
+    case ARENA_INTS:
+        return Int(bin_search_ints(ar.listof.Ints, key.as.Int, ar.count - 1));
+    case ARENA_DOUBLES:
+        return Int(bin_search_doubles(ar.listof.Doubles, key.as.Double, ar.count - 1));
+    case ARENA_LONGS:
+        return Int(bin_search_doubles(ar.listof.Doubles, key.as.Long, ar.count - 1));
+    // case ARENA_STRS:
+    // case ARENA_CSTR:
+    // case ARENA_STR:
+    // return ar;
+    default:
+        return Null();
+    }
+}

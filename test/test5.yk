@@ -1,0 +1,18 @@
+
+
+var a = [69, 2, 4, 5, 10];
+
+var b = [69.992, 2.12, 4433.12, 5.121, 1.69];
+
+
+a.sort();
+b.sort();
+
+a.reverse();
+b.reverse();
+
+pout(a, b);
+
+
+
+pout(b.bin_search(69.992));

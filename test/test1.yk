@@ -17,4 +17,8 @@ s.res();
 tab.res();
 c.brew();
 
-
+rm(p);
+rm(s);
+rm(tab);
+rm(fib);
+rm(c);

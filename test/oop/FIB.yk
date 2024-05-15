@@ -16,7 +16,7 @@ class FIB
     res()
     {
         var start = clock();
-        this.print_fib(30);
+        this.print_fib(25);
         pout(clock() - start);
     }
 

@@ -27,6 +27,8 @@ void _set_access(Element val, Arena index, Element el);
 Element _push_array_val(Element val, Element el);
 Element _pop_array_val(Element val);
 Element reverse_el(Element val);
+Arena sort_arena(Arena val);
+Arena search_arena(Arena ar, Arena key);
 
 Arena _len(Element el);
 
