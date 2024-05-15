@@ -2500,36 +2500,103 @@ static void char_swap(char *c, char *s)
     *c = *s;
     *s = tmp;
 }
-
-static void str_rev(char *src)
+static void int_swap(int *c, int *s)
 {
-    char *to = src + strlen(src) - 1;
-    char *from = src;
-
-    for (; from < to; --to, ++from)
-        char_swap(from, to);
+    int tmp = *c;
+    *c = *s;
+    *s = tmp;
+}
+static void double_swap(double *c, double *s)
+{
+    double tmp = *c;
+    *c = *s;
+    *s = tmp;
+}
+static void long_swap(long *c, long *s)
+{
+    long tmp = *c;
+    *c = *s;
+    *s = tmp;
 }
 
-Element reverse_native(Element el)
+static void rev(void *src, size_t len, T type)
 {
-    if (el.type != ARENA)
-    {
-        log_err("ERROR: invalid argument passed to reverse function.");
-        exit(1);
-    }
+    uint8_t *to = (uint8_t *)src + len;
+    uint8_t *from = (uint8_t *)src;
 
-    switch (el.arena.type)
+    switch (type)
+    {
+    case ARENA_INTS:
+    {
+        int *t = (int *)to;
+        int *f = (int *)from;
+        for (; f < t; --t, ++f)
+            int_swap(f, t);
+        break;
+    }
+    case ARENA_DOUBLES:
+    {
+
+        double *t = (double *)to;
+        double *f = (double *)from;
+        for (; f < t; --t, ++f)
+            double_swap(f, t);
+        break;
+    }
+    case ARENA_LONGS:
+    {
+        long *t = (long *)to;
+        long *f = (long *)from;
+        for (; f < t; --t, ++f)
+            long_swap(f, t);
+        break;
+    }
+    case ARENA_CSTR:
+    case ARENA_STR:
+        for (; from < to; --to, ++from)
+            char_swap((char *)from, (char *)to);
+        break;
+    default:
+        return;
+    }
+}
+
+Arena reverse_arena(Arena el)
+{
+
+    switch (el.type)
     {
     case ARENA_STR:
     case ARENA_CSTR:
     {
-        char *c = el.arena.as.String;
-        str_rev(c);
-        return OBJ(CString(c));
+        char *c = el.as.String;
+        rev(c, el.size - 1, el.type);
+        return CString(c);
+    }
+    case ARENA_INTS:
+    {
+        int *i = el.listof.Ints;
+        rev(i, (el.count - 1) * sizeof(int), el.type);
+        el.listof.Ints = i;
+        return el;
+    }
+    case ARENA_DOUBLES:
+    {
+        double *i = el.listof.Doubles;
+        rev(i, (el.count - 1) * sizeof(double), el.type);
+        el.listof.Doubles = i;
+        return el;
+    }
+    case ARENA_LONGS:
+    {
+        long *i = el.listof.Longs;
+        rev(i, (el.count - 1) * sizeof(long), el.type);
+        el.listof.Longs = i;
+        return el;
     }
     default:
         break;
     }
 
-    return null_obj();
+    return Null();
 }

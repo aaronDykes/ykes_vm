@@ -20,11 +20,19 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
 {
 
     Local *local = NULL;
-    a->meta.cwd = NULL;
+
+    a->class_compiler = NULL;
+    a->func = NULL;
+    a->func = function(name);
+
     a->count.local = 0;
     a->count.scope_depth = 0;
     a->count.call = 0;
     a->count.class = 0;
+    a->count.upvalue = 0;
+    a->count.param = 0;
+    a->count.native = 0;
+
     a->flag.first_expr = false;
     a->flag.call_param = false;
 
@@ -33,18 +41,14 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
     a->current.array_get = 0;
 
     a->count.upvalue = 0;
-    a->class_compiler = NULL;
 
     a->lookup.call = NULL;
     a->lookup.class = NULL;
     a->lookup.native = NULL;
     a->lookup.include = NULL;
 
-    a->func = NULL;
-    a->func = NULL;
-    a->func = function(name);
     a->meta.type = type;
-    // a->parser.current_file = b->base->meta.current_file;
+    a->meta.cwd = NULL;
 
     if (b)
     {
@@ -1688,7 +1692,9 @@ static void pop_array_val(Compiler *c)
 static void reverse_array(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to calling reverse.", &c->parser);
-    emit_byte(c, OP_REVERSE_ARRAY);
+    emit_byte(c, (c->count.scope_depth > 0)
+                     ? OP_REVERSE_LOCAL_ARRAY
+                     : OP_REVERSE_GLOB_ARRAY);
     consume(TOKEN_CH_RPAREN, "Expect `)` after call to reverse.", &c->parser);
 }
 
@@ -2404,6 +2410,7 @@ Function *compile_path(const char *src, const char *path, const char *name)
     c.base->hash.push = CString("push");
     c.base->hash.pop = CString("pop");
     c.base->hash.reverse = CString("reverse");
+    c.base->hash.remove = CString("remove");
 
     c.parser.panic = false;
     c.parser.err = false;

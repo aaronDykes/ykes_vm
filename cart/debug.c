@@ -369,8 +369,10 @@ int disassemble_instruction(Chunk *c, int offset)
         return byte_instruction("OP_MOV_PEEK_E1", c, offset);
     case OP_MOV_PEEK_E2:
         return byte_instruction("OP_MOV_PEEK_E2", c, offset);
-    case OP_REVERSE_ARRAY:
-        return simple_instruction("OP_REVERSE_ARRAY", offset);
+    case OP_REVERSE_GLOB_ARRAY:
+        return simple_instruction("OP_REVERSE_GLOB_ARRAY", offset);
+    case OP_REVERSE_LOCAL_ARRAY:
+        return simple_instruction("OP_REVERSE_LOCAL_ARRAY", offset);
     default:
         printf("Unkown opcode: %d\n", offset);
         return ++offset;

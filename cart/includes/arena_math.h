@@ -26,7 +26,7 @@ Element _get_each_access(Element a, int index);
 void _set_access(Element val, Arena index, Element el);
 Element _push_array_val(Element val, Element el);
 Element _pop_array_val(Element val);
-Element reverse_native(Element val);
+Arena reverse_arena(Arena val);
 
 Arena _len(Element el);
 

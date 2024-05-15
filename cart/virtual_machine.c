@@ -841,10 +841,14 @@ Interpretation run(void)
             machine.e1 = cpy_array(machine.e1);
             break;
 
-        case OP_REVERSE_ARRAY:
-            if (machine.e1.type == NULL_OBJ)
-                machine.e1 = OBJ(machine.r1);
-            machine.e1 = reverse_native(machine.e1);
+        case OP_REVERSE_GLOB_ARRAY:
+
+            // if (machine.e1.type == NULL_OBJ)
+            // machine.e1 = OBJ(machine.r1);
+            machine.r1 = reverse_arena(machine.r1);
+            break;
+        case OP_REVERSE_LOCAL_ARRAY:
+            PUSH(OBJ(reverse_arena(POP().arena)));
             break;
 
         case OP_LEN:
