@@ -20,40 +20,47 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
 {
 
     Local *local = NULL;
-    a->cwd = NULL;
-    a->local_count = 0;
-    a->scope_depth = 0;
-    a->call_count = 0;
-    a->class_count = 0;
-    a->first_expr = false;
-    a->call_param = false;
+    a->meta.cwd = NULL;
+    a->count.local = 0;
+    a->count.scope_depth = 0;
+    a->count.call = 0;
+    a->count.class = 0;
+    a->flag.first_expr = false;
+    a->flag.call_param = false;
 
-    a->array_index = 0;
-    a->array_set = 0;
-    a->array_get = 0;
+    a->current.array_index = 0;
+    a->current.array_set = 0;
+    a->current.array_get = 0;
 
-    a->upvalue_count = 0;
+    a->count.upvalue = 0;
     a->class_compiler = NULL;
-    a->calls = NULL;
-    a->classes = NULL;
+
+    a->lookup.call = NULL;
+    a->lookup.class = NULL;
+    a->lookup.native = NULL;
+    a->lookup.include = NULL;
+
     a->func = NULL;
     a->func = NULL;
     a->func = function(name);
-    a->type = type;
-    // a->parser.current_file = b->base->current_file;
+    a->meta.type = type;
+    // a->parser.current_file = b->base->meta.current_file;
 
     if (b)
     {
         a->base = b->base;
         a->parser = b->parser;
         a->enclosing = b;
-        a->scope_depth = b->scope_depth;
+        a->count.scope_depth = b->count.scope_depth;
         a->class_compiler = b->class_compiler;
 
-        local = &b->locals[b->local_count++];
+        local = &b->stack.local[b->count.local++];
     }
     else
-        local = &a->locals[a->local_count++];
+    {
+        local = &a->stack.local[a->count.local++];
+        a->enclosing = NULL;
+    }
 
     local->depth = 0;
     local->captured = false;
@@ -118,7 +125,7 @@ static char *read_file(const char *path)
 static bool resolve_include(Compiler *c, Arena ar)
 {
 
-    Element el = find_entry(&c->base->includes, &ar);
+    Element el = find_entry(&c->base->lookup.include, &ar);
 
     if (el.type != NULL_OBJ)
         return true;
@@ -162,7 +169,7 @@ static void include_dir(Compiler *c, Arena inc)
 
     char path[CWD_MAX] = {0};
     inc.as.String[inc.as.len - 1] = '\0';
-    str_cop(path, (char *)c->base->cwd);
+    str_cop(path, (char *)c->base->meta.cwd);
     strcat(path, inc.as.String);
 
     dir = opendir(path);
@@ -180,7 +187,7 @@ static void include_dir(Compiler *c, Arena inc)
 
         char f_path[CWD_MAX] = {0};
 
-        str_cop(f_path, (char *)c->base->cwd);
+        str_cop(f_path, (char *)c->base->meta.cwd);
         strcat(f_path, inc.as.String);
         strcat(f_path, entry->d_name);
 
@@ -190,7 +197,7 @@ static void include_dir(Compiler *c, Arena inc)
             error("Double include.", &c->parser);
             exit(1);
         }
-        write_table(c->base->includes, e, OBJ(e));
+        write_table(c->base->lookup.include, e, OBJ(e));
 
         char *file = read_file(f_path);
 
@@ -234,7 +241,7 @@ static void include_file(Compiler *c)
 #define SIZE(x, y) \
     strlen(x) + strlen(y)
 
-    if (c->type != SCRIPT)
+    if (c->meta.type != SCRIPT)
     {
         error("Can only include files at top level.", &c->parser);
         exit(1);
@@ -259,14 +266,14 @@ static void include_file(Compiler *c)
         exit(1);
     }
 
-    write_table(c->includes, inc, OBJ(inc));
+    write_table(c->base->lookup.include, inc, OBJ(inc));
 
     consume(TOKEN_CH_SEMI, "Expect `;` at end of include statement.", &c->parser);
     remaining = (char *)c->parser.cur.start;
 
     char path[CWD_MAX] = {0};
 
-    str_cop(path, (char *)c->base->cwd);
+    str_cop(path, (char *)c->base->meta.cwd);
     strcat(path, inc.as.String);
 
     char *file = read_file(path);
@@ -317,8 +324,8 @@ static void class_declaration(Compiler *c)
     ClassCompiler *class = NULL;
     class = ALLOC(sizeof(ClassCompiler));
 
-    write_table(c->base->classes, classc->name, OBJ(Int(c->base->class_count++)));
-    c->base->instances[c->base->class_count - 1] = classc;
+    write_table(c->base->lookup.class, classc->name, OBJ(Int(c->base->count.class ++)));
+    c->base->stack.instance[c->base->count.class - 1] = classc;
     class->instance_name = ar;
 
     class->enclosing = c->class_compiler;
@@ -342,7 +349,7 @@ static void method(Compiler *c, Class *class)
 
     ObjType type = INIT;
 
-    if (ar.as.hash != c->base->init_func.as.hash)
+    if (ar.as.hash != c->base->hash.init.as.hash)
         type = METHOD;
 
     method_body(c, type, ar, &class);
@@ -388,10 +395,10 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
         c, OP_CLOSURE,
         add_constant(&c->func->ch, CLOSURE(clos)));
 
-    for (int i = 0; i < tmp->upvalue_count; i++)
+    for (int i = 0; i < tmp->count.upvalue; i++)
     {
-        emit_byte(c, tmp->upvalues[i].islocal ? 1 : 0);
-        emit_byte(c, (uint8_t)tmp->upvalues[i].index);
+        emit_byte(c, tmp->stack.upvalue[i].islocal ? 1 : 0);
+        emit_byte(c, (uint8_t)tmp->stack.upvalue[i].index);
     }
 }
 
@@ -399,7 +406,7 @@ static void call(Compiler *c)
 {
     uint8_t argc = argument_list(c);
 
-    emit_bytes(c, (c->scope_depth > 0) ? OP_CALL_LOCAL : OP_CALL, argc);
+    emit_bytes(c, (c->count.scope_depth > 0) ? OP_CALL_LOCAL : OP_CALL, argc);
     // emit_bytes(c, OP_CALL, argc);
 }
 
@@ -409,7 +416,7 @@ static int argument_list(Compiler *c)
 
     if (match(TOKEN_CH_RPAREN, &c->parser))
         return 0;
-    c->call_param = true;
+    c->flag.call_param = true;
     do
     {
         expression(c);
@@ -419,7 +426,7 @@ static int argument_list(Compiler *c)
 
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
-    c->call_param = false;
+    c->flag.call_param = false;
     consume(TOKEN_CH_RPAREN, "Expect `)` after function args", &c->parser);
     return argc;
 }
@@ -429,7 +436,7 @@ static void func_declaration(Compiler *c)
     consume(TOKEN_ID, "Expect function name.", &c->parser);
     Arena ar = parse_func_id(c);
 
-    write_table(c->base->calls, ar, OBJ(Int(c->base->call_count++)));
+    write_table(c->base->lookup.call, ar, OBJ(Int(c->base->count.call++)));
     func_body(c, CLOSURE, ar);
 }
 
@@ -467,10 +474,10 @@ static void func_body(Compiler *c, ObjType type, Arena ar)
         c, OP_CLOSURE,
         add_constant(&c->func->ch, CLOSURE(clos)));
 
-    for (int i = 0; i < tmp->upvalue_count; i++)
+    for (int i = 0; i < tmp->count.upvalue; i++)
     {
-        emit_byte(c, tmp->upvalues[i].islocal ? 1 : 0);
-        emit_byte(c, (uint8_t)tmp->upvalues[i].index);
+        emit_byte(c, tmp->stack.upvalue[i].islocal ? 1 : 0);
+        emit_byte(c, (uint8_t)tmp->stack.upvalue[i].index);
     }
 }
 
@@ -518,7 +525,7 @@ static void var_dec(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        c->first_expr = false;
+        c->flag.first_expr = false;
 
         emit_bytes(c, set, glob);
     }
@@ -555,7 +562,7 @@ static void synchronize(Parser *parser)
 static void statement(Compiler *c)
 {
 
-    // c->first_expr = false;
+    // c->flag.first_expr = false;
     if (match(TOKEN_PRINT, &c->parser))
         print_statement(c);
     else if (match(TOKEN_OP_REM, &c->parser))
@@ -601,7 +608,7 @@ static void rm_statement(Compiler *c)
     }
 
     emit_bytes(c, get, arg);
-    emit_byte(c, (c->scope_depth > 0) ? OP_RM_LOCAL : OP_RM);
+    emit_byte(c, (c->count.scope_depth > 0) ? OP_RM_LOCAL : OP_RM);
     consume(TOKEN_CH_RPAREN, "Expect `)` after rm statement", &c->parser);
     consume(TOKEN_CH_SEMI, "Expect `;` at end of statement", &c->parser);
 }
@@ -628,7 +635,7 @@ static void for_statement(Compiler *c)
     if (!match(TOKEN_CH_SEMI, &c->parser))
     {
         expression(c);
-        c->first_expr = false;
+        c->flag.first_expr = false;
         consume(TOKEN_CH_SEMI, "Expect `;` after 'for' condition.", &c->parser);
         exit = emit_jump(c, OP_JMPF);
         emit_byte(c, OP_POP);
@@ -639,7 +646,7 @@ static void for_statement(Compiler *c)
         int inc_start = c->func->ch.op_codes.count;
 
         expression(c);
-        c->first_expr = false;
+        c->flag.first_expr = false;
         emit_byte(c, OP_POP);
         consume(TOKEN_CH_RPAREN, "Expect `)` after 'for' statement.", &c->parser);
 
@@ -666,9 +673,9 @@ static void while_statement(Compiler *c)
 
     consume(TOKEN_CH_LPAREN, "Expect `(` after 'while'.", &c->parser);
     expression(c);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_bytes(c, OP_POPN, add_constant(&c->func->ch, OBJ(Int(2))));
-    c->first_expr = false;
+    c->flag.first_expr = false;
     consume(TOKEN_CH_RPAREN, "Expect `)` after 'while' condition.", &c->parser);
 
     int exit_jmp = emit_jump(c, OP_JMPF);
@@ -715,9 +722,9 @@ static void each_statement(Compiler *c)
 
     id(c);
 
-    emit_byte(c, (c->scope_depth > 0) ? OP_EACH_LOCAL_ACCESS : OP_EACH_ACCESS);
+    emit_byte(c, (c->count.scope_depth > 0) ? OP_EACH_LOCAL_ACCESS : OP_EACH_ACCESS);
     // emit_byte(c, OP_EACH_ACCESS);
-    int exit = emit_jump(c, (c->scope_depth > 0) ? OP_JMP_NIL_LOCAL : OP_JMP_NIL);
+    int exit = emit_jump(c, (c->count.scope_depth > 0) ? OP_JMP_NIL_LOCAL : OP_JMP_NIL);
 
     emit_bytes(c, set, glob);
 
@@ -733,14 +740,14 @@ static void consume_if(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after an 'if'.", &c->parser);
     expression(c);
-    c->first_expr = false;
+    c->flag.first_expr = false;
     consume(TOKEN_CH_RPAREN, "Expect `)` after an 'if' condtion.", &c->parser);
 }
 static void consume_elif(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after an 'elif'.", &c->parser);
     expression(c);
-    c->first_expr = false;
+    c->flag.first_expr = false;
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after an 'elif' condtion.", &c->parser);
 }
@@ -771,7 +778,7 @@ static void switch_statement(Compiler *c)
     if (expect)
         consume(TOKEN_CH_RCURL, "Expect `}` after switch body", &c->parser);
 
-    c->call_param = false;
+    c->flag.call_param = false;
 
     Element el = OBJ(c->func->ch.cases);
     push_int(&el, c->func->ch.op_codes.count);
@@ -811,13 +818,13 @@ static void if_statement(Compiler *c)
     consume_if(c);
 
     int fi = emit_jump(c, OP_JMPF);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_byte(c, OP_POP);
 
     statement(c);
 
     int exit = emit_jump(c, OP_JMP);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_byte(c, OP_POP);
     patch_jump(c, fi);
 
@@ -828,7 +835,7 @@ static void if_statement(Compiler *c)
 
     Element el = OBJ(c->func->ch.cases);
     push_int(&el, c->func->ch.op_codes.count);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_byte(c, OP_POP);
     patch_jump(c, exit);
 }
@@ -840,14 +847,14 @@ static void elif_statement(Compiler *c)
 
         consume_elif(c);
         int tr = emit_jump_long(c, OP_JMPC);
-        if (c->scope_depth > 0)
+        if (c->count.scope_depth > 0)
             emit_byte(c, OP_POP);
         int begin = c->func->ch.op_codes.count;
         statement(c);
         emit_bytes(c, OP_JMPL, c->func->ch.cases.count);
 
         patch_jump_long(c, begin, tr);
-        if (c->scope_depth > 0)
+        if (c->count.scope_depth > 0)
             emit_byte(c, OP_POP);
     }
 }
@@ -875,19 +882,19 @@ static void null_coalescing_statement(Compiler *c)
 
 static void return_statement(Compiler *c)
 {
-    if (c->type == SCRIPT)
+    if (c->meta.type == SCRIPT)
         error("ERROR: Unable to return from top of script.", &c->parser);
 
     else if (match(TOKEN_CH_SEMI, &c->parser))
         emit_return(c);
     else
     {
-        if (c->type == INIT)
+        if (c->meta.type == INIT)
             error("ERROR: Unable to return value from initializer.", &c->parser);
         expression(c);
-        c->first_expr = false;
+        c->flag.first_expr = false;
         consume(TOKEN_CH_SEMI, "ERROR: Expect semi colon after return statement.", &c->parser);
-        // if (c->scope_depth > 0)
+        // if (c->count.scope_depth > 0)
         emit_byte(c, OP_RETURN);
     }
 }
@@ -944,7 +951,7 @@ static int emit_jump(Compiler *c, int byte)
 static void default_expression(Compiler *c)
 {
     expression(c);
-    c->first_expr = false;
+    c->flag.first_expr = false;
     consume(TOKEN_CH_SEMI, "Expect `;` after expression.", &c->parser);
     emit_byte(c, OP_POP);
 }
@@ -952,7 +959,7 @@ static void default_expression(Compiler *c)
 static void print_statement(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to print expression", &c->parser);
-    // c->first_expr = false;
+    // c->flag.first_expr = false;
     do
     {
         expression(c);
@@ -962,13 +969,13 @@ static void print_statement(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        c->first_expr = false;
+        c->flag.first_expr = false;
         if (check(TOKEN_CH_COMMA, &c->parser))
-            emit_byte(c, (c->scope_depth > 0) ? OP_PRINT_LOCAL : OP_PRINT);
+            emit_byte(c, (c->count.scope_depth > 0) ? OP_PRINT_LOCAL : OP_PRINT);
 
     } while (match(TOKEN_CH_COMMA, &c->parser));
 
-    emit_byte(c, (c->scope_depth > 0) ? OP_PRINT_LOCAL : OP_PRINT);
+    emit_byte(c, (c->count.scope_depth > 0) ? OP_PRINT_LOCAL : OP_PRINT);
 
     consume(TOKEN_CH_RPAREN, "Expect `)` after print expression", &c->parser);
     consume(TOKEN_CH_SEMI, "Expect ';' after value.", &c->parser);
@@ -976,22 +983,22 @@ static void print_statement(Compiler *c)
 
 static void begin_scope(Compiler *c)
 {
-    c->scope_depth++;
+    c->count.scope_depth++;
 }
 static void end_scope(Compiler *c)
 {
 
-    c->scope_depth--;
-    if (c->local_count > 0 && (c->locals[c->local_count - 1].depth > c->scope_depth))
-        emit_bytes(c, OP_POPN, add_constant(&c->func->ch, OBJ(Int(c->local_count - 1))));
+    c->count.scope_depth--;
+    if (c->count.local > 0 && (c->stack.local[c->count.local - 1].depth > c->count.scope_depth))
+        emit_bytes(c, OP_POPN, add_constant(&c->func->ch, OBJ(Int(c->count.local - 1))));
 
-    while (c->local_count > 0 && (c->locals[c->local_count - 1].depth > c->scope_depth))
+    while (c->count.local > 0 && (c->stack.local[c->count.local - 1].depth > c->count.scope_depth))
     {
-        if (c->locals[c->local_count - 1].captured)
+        if (c->stack.local[c->count.local - 1].captured)
             emit_byte(c, OP_CLOSE_UPVAL);
         else
-            ARENA_FREE(&c->locals[c->local_count - 1].name);
-        --c->local_count;
+            ARENA_FREE(&c->stack.local[c->count.local - 1].name);
+        --c->count.local;
     }
 }
 
@@ -1027,7 +1034,7 @@ static void expression(Compiler *c)
 static void grouping(Compiler *c)
 {
     emit_byte(c, OP_MOV_R1_R3);
-    c->first_expr = false;
+    c->flag.first_expr = false;
     expression(c);
     consume(TOKEN_CH_RPAREN, "Expect `)` after expression", &c->parser);
     emit_byte(c, OP_MOV_R3_R2);
@@ -1085,7 +1092,7 @@ static void binary(Compiler *c)
     PRule *rule = get_rule(t);
     parse_precedence((Precedence)rule->prec + 1, c);
 
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         switch (t)
         {
         case TOKEN_OP_ADD:
@@ -1233,7 +1240,7 @@ static void error_at(Token toke, Parser *parser, const char *err)
 
 static void emit_return(Compiler *c)
 {
-    if (c->type == INIT)
+    if (c->meta.type == INIT)
         emit_bytes(c, OP_GET_LOCAL, 0);
     else
         emit_byte(c, OP_NULL);
@@ -1252,17 +1259,17 @@ static void emit_bytes(Compiler *c, int b1, int b2)
 static void pi(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Double(M_PI)));
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1270,17 +1277,17 @@ static void pi(Compiler *c)
 static void euler(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Double(M_E)));
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1290,18 +1297,18 @@ static void dval(Compiler *c)
     double val = strtod(c->parser.pre.start, NULL);
     int arg = add_constant(&c->func->ch, OBJ(Double(val)));
 
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1310,18 +1317,18 @@ static void ival(Compiler *c)
 
     int arg = add_constant(&c->func->ch, OBJ(Int((atoi(c->parser.pre.start)))));
 
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1329,18 +1336,18 @@ static void llint(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Long(atoll(c->parser.pre.start))));
 
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1348,18 +1355,18 @@ static void ch(Compiler *c)
 {
     int arg = add_constant(&c->func->ch, OBJ(Char(*++c->parser.pre.start)));
 
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1371,18 +1378,18 @@ static void boolean(Compiler *c)
         arg = add_constant(&c->func->ch, OBJ(Null()));
     else
         arg = add_constant(&c->func->ch, OBJ(Bool(*c->parser.pre.start == 't' ? true : false)));
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1397,18 +1404,18 @@ static void cstr(Compiler *c)
 
     int arg = add_constant(&c->func->ch, OBJ(CString(parse_string(c))));
 
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1419,18 +1426,18 @@ static void string(Compiler *c)
     int arg = add_constant(&c->func->ch, OBJ(String(parse_string(c))));
     consume(TOKEN_CH_RPAREN, "Expect `)` after string declaration.", &c->parser);
 
-    if (!c->first_expr)
+    if (!c->flag.first_expr)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
-        c->first_expr = true;
+        c->flag.first_expr = true;
     }
     else
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1443,7 +1450,7 @@ static void array_alloc(Compiler *c)
     {
         int arg = add_constant(&c->func->ch, OBJ(GROW_ARRAY(NULL, atoi(c->parser.pre.start), ARENA_INTS)));
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->scope_depth > 0 || c->call_param)
+        if (c->count.scope_depth > 0 || c->flag.call_param)
             emit_byte(c, OP_STR_R1);
     }
     else if (match(TOKEN_ID, &c->parser))
@@ -1477,7 +1484,7 @@ static void vector_alloc(Compiler *c)
 
     emit_bytes(c, OP_MOV_CNT_R1, arg);
     emit_byte(c, OP_ALLOC_VECTOR);
-    if (c->scope_depth > 0 || c->call_param)
+    if (c->count.scope_depth > 0 || c->flag.call_param)
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1502,7 +1509,7 @@ static void stack_alloc(Compiler *c)
 
     emit_bytes(c, OP_MOV_CNT_R1, arg);
     emit_byte(c, OP_ALLOC_STACK);
-    if (c->scope_depth > 0 || c->call_param)
+    if (c->count.scope_depth > 0 || c->flag.call_param)
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1526,14 +1533,14 @@ static void table(Compiler *c)
     emit_bytes(c, OP_MOV_CNT_R1, cst);
     emit_byte(c, OP_ALLOC_TABLE);
 
-    if (c->scope_depth > 0 || c->call_param)
+    if (c->count.scope_depth > 0 || c->flag.call_param)
         emit_byte(c, OP_STR_E2);
 }
 
 static int resolve_native(Compiler *c, Arena *ar)
 {
 
-    Element el = find_entry(&c->base->natives, ar);
+    Element el = find_entry(&c->base->lookup.native, ar);
 
     if (el.type == ARENA && el.arena.type == ARENA_INT)
         return el.arena.as.Int;
@@ -1549,7 +1556,7 @@ static void parse_native_var_arg(Compiler *c)
     Arena ar = native_name(ch);
     int arg = resolve_native(c, &ar);
     emit_bytes(c, OP_GET_NATIVE, arg);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_byte(c, OP_STR_E2);
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to function call", &c->parser);
     call(c);
@@ -1625,23 +1632,23 @@ static Arena get_id(Compiler *c)
     else
     {
         emit_bytes(c, get, arg);
-        if (get == OP_GET_GLOBAL && (c->scope_depth > 0 || c->call_param))
+        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || c->flag.call_param))
             emit_byte(c, 1);
         else if (get == OP_GET_GLOBAL)
             emit_byte(c, 0);
 
         if (check(TOKEN_CH_DOT, &c->parser))
-            c->array_set = set,
-            c->array_index = arg;
+            c->current.array_set = set,
+            c->current.array_index = arg;
     }
-    c->first_expr = false;
+    c->flag.first_expr = false;
     return args;
 }
 
 static int resolve_call(Compiler *c, Arena *ar)
 {
 
-    Element el = find_entry(&c->base->calls, ar);
+    Element el = find_entry(&c->base->lookup.call, ar);
 
     if (el.type == ARENA && el.arena.type == ARENA_INT)
         return el.arena.as.Int;
@@ -1651,7 +1658,7 @@ static int resolve_call(Compiler *c, Arena *ar)
 
 static int resolve_instance(Compiler *c, Arena ar)
 {
-    Element el = find_entry(&c->base->classes, &ar);
+    Element el = find_entry(&c->base->lookup.class, &ar);
 
     if (el.type == ARENA && el.arena.type == ARENA_INT)
         return el.arena.as.Int;
@@ -1663,8 +1670,8 @@ static void push_array_val(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after push.", &c->parser);
     expression(c);
-    c->first_expr = false;
-    emit_byte(c, (c->scope_depth > 0)
+    c->flag.first_expr = false;
+    emit_byte(c, (c->count.scope_depth > 0)
                      ? OP_PUSH_LOCAL_ARRAY_VAL
                      : OP_PUSH_GLOB_ARRAY_VAL);
     consume(TOKEN_CH_RPAREN, "Expect `)` after push expression.", &c->parser);
@@ -1672,7 +1679,7 @@ static void push_array_val(Compiler *c)
 static void pop_array_val(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` after push.", &c->parser);
-    emit_byte(c, (c->scope_depth > 0)
+    emit_byte(c, (c->count.scope_depth > 0)
                      ? OP_POP_LOCAL_ARRAY_VAL
                      : OP_POP_GLOB_ARRAY_VAL);
     consume(TOKEN_CH_RPAREN, "Expect `)` after push expression.", &c->parser);
@@ -1700,20 +1707,20 @@ static void dot(Compiler *c)
 
     Arena ar = parse_id(c);
 
-    if (ar.as.hash == c->base->ar_reverse.as.hash)
+    if (ar.as.hash == c->base->hash.reverse.as.hash)
     {
         emit_byte(c, OP_MOV_E1_E3);
         reverse_array(c);
         return;
     }
-    if (ar.as.hash == c->base->len.as.hash)
+    if (ar.as.hash == c->base->hash.len.as.hash)
     {
         emit_byte(c, OP_MOV_E1_E3);
-        emit_bytes(c, (c->scope_depth > 0) ? OP_LEN_LOCAL : OP_LEN, OP_ZERO_E1);
+        emit_bytes(c, (c->count.scope_depth > 0) ? OP_LEN_LOCAL : OP_LEN, OP_ZERO_E1);
 
         return;
     }
-    if (ar.as.hash == c->base->ar_push.as.hash)
+    if (ar.as.hash == c->base->hash.push.as.hash)
     {
         emit_bytes(c, OP_MOV_E1_E3, OP_ZERO_E1);
         push_array_val(c);
@@ -1721,7 +1728,7 @@ static void dot(Compiler *c)
         return;
     }
 
-    if (ar.as.hash == c->base->ar_pop.as.hash)
+    if (ar.as.hash == c->base->hash.pop.as.hash)
     {
 
         emit_bytes(c, OP_MOV_E1_E3, OP_ZERO_E1);
@@ -1747,14 +1754,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_ADD_LOCAL : OP_ADD);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_ADD_LOCAL : OP_ADD);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1764,14 +1771,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_SUB_LOCAL : OP_SUB);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_SUB_LOCAL : OP_SUB);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1781,14 +1788,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_MUL_LOCAL : OP_MUL);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_MUL_LOCAL : OP_MUL);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1798,14 +1805,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_DIV_LOCAL : OP_DIV);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_DIV_LOCAL : OP_DIV);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1814,14 +1821,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_MOD_LOCAL : OP_MOD);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_MOD_LOCAL : OP_MOD);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1831,14 +1838,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_AND_LOCAL : OP_AND);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_AND_LOCAL : OP_AND);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1847,14 +1854,14 @@ static void dot(Compiler *c)
         int cst = add_constant(&c->func->ch, OBJ(ar));
         emit_bytes(c, OP_GET_PROP, cst);
 
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_OR_LOCAL : OP_OR);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_OR_LOCAL : OP_OR);
 
         emit_bytes(c, OP_SET_PROP, cst);
     }
@@ -1868,7 +1875,7 @@ static void dot(Compiler *c)
             emit_bytes(c, OP_GET_PROP, cst);
     }
 
-    c->first_expr = false;
+    c->flag.first_expr = false;
 }
 
 static void int_array(Compiler *c)
@@ -1888,7 +1895,7 @@ static void int_array(Compiler *c)
 
     int arg = add_constant(&c->func->ch, el);
     emit_bytes(c, OP_MOV_CNT_R1, arg);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_byte(c, OP_STR_R1);
 }
 static void double_array(Compiler *c)
@@ -1908,7 +1915,7 @@ static void double_array(Compiler *c)
 
     int arg = add_constant(&c->func->ch, el);
     emit_bytes(c, OP_MOV_CNT_R1, arg);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_byte(c, OP_STR_R1);
 }
 static void string_array(Compiler *c)
@@ -1928,7 +1935,7 @@ static void string_array(Compiler *c)
 
     int arg = add_constant(&c->func->ch, el);
     emit_bytes(c, OP_MOV_CNT_R1, arg);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_byte(c, OP_STR_R1);
 }
 static void long_array(Compiler *c)
@@ -1947,7 +1954,7 @@ static void long_array(Compiler *c)
 
     int arg = add_constant(&c->func->ch, el);
     emit_bytes(c, OP_MOV_CNT_R1, arg);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         emit_byte(c, OP_STR_R1);
 }
 
@@ -1980,7 +1987,7 @@ static void _access(Compiler *c)
 {
 
     expression(c);
-    c->first_expr = false;
+    c->flag.first_expr = false;
 
     consume(TOKEN_CH_RSQUARE, "Expect closing brace after array access.", &c->parser);
 
@@ -1992,17 +1999,17 @@ static void _access(Compiler *c)
 
         emit_byte(c, OP_MOV_R1_R4);
         expression(c);
-        c->first_expr = false;
+        c->flag.first_expr = false;
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_SET_LOCAL_ACCESS : OP_SET_GLOB_ACCESS);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_SET_LOCAL_ACCESS : OP_SET_GLOB_ACCESS);
     }
     else
-        emit_byte(c, (c->scope_depth > 0) ? OP_GET_LOCAL_ACCESS : OP_GET_GLOB_ACCESS);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_GET_LOCAL_ACCESS : OP_GET_GLOB_ACCESS);
 }
 
 static void id(Compiler *c)
@@ -2020,7 +2027,7 @@ static void id(Compiler *c)
     {
         emit_bytes(c, OP_GET_CLOSURE, arg);
 
-        if (c->scope_depth > 0)
+        if (c->count.scope_depth > 0)
             emit_byte(c, OP_STR_E2);
         return;
     }
@@ -2031,12 +2038,12 @@ static void id(Compiler *c)
         emit_bytes(c, OP_GET_CLASS, arg);
         consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
 
-        if (c->base->instances[arg]->init)
+        if (c->base->stack.instance[arg]->init)
         {
-            Closure *clos = c->base->instances[arg]->init;
+            Closure *clos = c->base->stack.instance[arg]->init;
             int cst = add_constant(&c->func->ch, CLOSURE(clos));
             emit_bytes(c, OP_MOV_CNT_E2, cst);
-            if (c->scope_depth > 0)
+            if (c->count.scope_depth > 0)
                 emit_byte(c, OP_STR_E2);
             call(c);
         }
@@ -2095,7 +2102,7 @@ static void id(Compiler *c)
     else if (match(TOKEN_ADD_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->first_expr = true;
+        c->flag.first_expr = true;
 
         expression(c);
 
@@ -2104,28 +2111,28 @@ static void id(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_ADD_LOCAL : OP_ADD);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_ADD_LOCAL : OP_ADD);
         emit_bytes(c, set, arg);
     }
     else if (match(TOKEN_SUB_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
 
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, (c->scope_depth > 0) ? OP_SUB_LOCAL : OP_SUB);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_SUB_LOCAL : OP_SUB);
         emit_bytes(c, set, arg);
     }
     else if (match(TOKEN_MUL_ASSIGN, &c->parser))
     {
 
         emit_bytes(c, get, arg);
-        c->first_expr = true;
+        c->flag.first_expr = true;
 
         expression(c);
 
@@ -2133,79 +2140,79 @@ static void id(Compiler *c)
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, (c->scope_depth > 0) ? OP_MUL_LOCAL : OP_MUL);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_MUL_LOCAL : OP_MUL);
         emit_bytes(c, set, arg);
     }
     else if (match(TOKEN_DIV_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
-        emit_byte(c, (c->scope_depth > 0) ? OP_DIV_LOCAL : OP_DIV);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_DIV_LOCAL : OP_DIV);
         emit_bytes(c, set, arg);
     }
     else if (match(TOKEN_MOD_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_MOD_LOCAL : OP_MOD);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_MOD_LOCAL : OP_MOD);
         emit_bytes(c, set, arg);
     }
     else if (match(TOKEN_AND_ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_AND_LOCAL : OP_AND);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_AND_LOCAL : OP_AND);
         emit_bytes(c, set, arg);
     }
     else if (match(TOKEN_OR__ASSIGN, &c->parser))
     {
         emit_bytes(c, get, arg);
-        c->first_expr = true;
+        c->flag.first_expr = true;
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->scope_depth > 0) ? OP_OR_LOCAL : OP_OR);
+        emit_byte(c, (c->count.scope_depth > 0) ? OP_OR_LOCAL : OP_OR);
         emit_bytes(c, set, arg);
     }
     else
     {
         emit_bytes(c, get, arg);
-        if (get == OP_GET_GLOBAL && (c->scope_depth > 0 || c->call_param))
+        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || c->flag.call_param))
             emit_byte(c, 1);
         else if (get == OP_GET_GLOBAL)
             emit_byte(c, 0);
 
         if (check(TOKEN_CH_DOT, &c->parser))
-            c->array_set = set,
-            c->array_index = arg;
+            c->current.array_set = set,
+            c->current.array_index = arg;
     }
-    c->first_expr = false;
+    c->flag.first_expr = false;
 }
 
 static int parse_var(Compiler *c, Arena ar)
 {
     declare_var(c, ar);
-    if (c->scope_depth > 0)
+    if (c->count.scope_depth > 0)
         return -1;
     return add_constant(&c->func->ch, OBJ(ar));
 }
@@ -2220,8 +2227,8 @@ static bool idcmp(Arena a, Arena b)
 
 static int resolve_local(Compiler *c, Arena *name)
 {
-    for (int i = c->local_count - 1; i >= 0; i--)
-        if (idcmp(*name, c->locals[i].name))
+    for (int i = c->count.local - 1; i >= 0; i--)
+        if (idcmp(*name, c->stack.local[i].name))
             return i;
     return -1;
 }
@@ -2235,7 +2242,7 @@ static int resolve_upvalue(Compiler *c, Arena *name)
 
     if (local != -1)
     {
-        c->enclosing->locals[local].captured = true;
+        c->enclosing->stack.local[local].captured = true;
         return add_upvalue(c, (uint8_t)local, true);
     }
 
@@ -2254,7 +2261,7 @@ static int add_upvalue(Compiler *c, int index, bool islocal)
 
     for (int i = 0; i < count; i++)
     {
-        Upvalue *upval = &c->upvalues[i];
+        Upvalue *upval = &c->stack.upvalue[i];
 
         if (upval->index == index && upval->islocal == islocal)
             return i;
@@ -2266,22 +2273,22 @@ static int add_upvalue(Compiler *c, int index, bool islocal)
         return 0;
     }
 
-    c->upvalues[c->func->upvalue_count].islocal = islocal;
-    c->upvalues[c->func->upvalue_count].index = (uint16_t)index;
-    c->upvalue_count++;
+    c->stack.upvalue[c->func->upvalue_count].islocal = islocal;
+    c->stack.upvalue[c->func->upvalue_count].index = (uint16_t)index;
+    c->count.upvalue++;
     return c->func->upvalue_count++;
 }
 
 static void declare_var(Compiler *c, Arena ar)
 {
-    if (c->scope_depth == 0)
+    if (c->count.scope_depth == 0)
         return;
 
-    for (int i = c->local_count - 1; i >= 0; i--)
+    for (int i = c->count.local - 1; i >= 0; i--)
     {
-        Local *local = &c->locals[i];
+        Local *local = &c->stack.local[i];
 
-        if (local->depth != 0 && local->depth < c->scope_depth)
+        if (local->depth != 0 && local->depth < c->count.scope_depth)
             break;
 
         else if (idcmp(ar, local->name))
@@ -2293,15 +2300,15 @@ static void declare_var(Compiler *c, Arena ar)
 
 static void add_local(Compiler *c, Arena *ar)
 {
-    if (c->local_count == LOCAL_COUNT)
+    if (c->count.local == LOCAL_COUNT)
     {
         error("ERROR: Too many local variables in function.", &c->parser);
         return;
     }
-    c->locals[c->local_count].name = *ar;
-    c->locals[c->local_count].depth = c->scope_depth;
-    c->locals[c->local_count].captured = false;
-    c->local_count++;
+    c->stack.local[c->count.local].name = *ar;
+    c->stack.local[c->count.local].depth = c->count.scope_depth;
+    c->stack.local[c->count.local].captured = false;
+    c->count.local++;
 }
 static Function *end_compile(Compiler *a)
 {
@@ -2333,18 +2340,31 @@ Function *compile(const char *src)
 
     init_compiler(&c, NULL, SCRIPT, func_name("SCRIPT"));
 
-    c.init_func = String("init");
     c.base = &c;
-    c.base->cwd = NULL;
-    c.base->calls = GROW_TABLE(NULL, TABLE_SIZE);
-    c.base->classes = GROW_TABLE(NULL, TABLE_SIZE);
-    c.base->includes = GROW_TABLE(NULL, TABLE_SIZE);
-    c.base->len = CString("len");
-    c.base->ar_push = CString("push");
-    c.base->ar_pop = CString("pop");
+    c.base->meta.cwd = NULL;
+    c.base->meta.current_file = NULL;
+
+    c.base->lookup.call = GROW_TABLE(NULL, TABLE_SIZE);
+    c.base->lookup.class = GROW_TABLE(NULL, TABLE_SIZE);
+    c.base->lookup.include = GROW_TABLE(NULL, TABLE_SIZE);
+    c.base->lookup.native = GROW_TABLE(NULL, TABLE_SIZE);
+
+    c.base->hash.len = CString("len");
+    c.base->hash.init = String("init");
+    c.base->hash.push = CString("push");
+    c.base->hash.pop = CString("pop");
+    c.base->hash.reverse = CString("reverse");
 
     c.parser.panic = false;
     c.parser.err = false;
+    c.parser.current_file = NULL;
+
+    write_table(c.base->lookup.native, CString("clock"), OBJ(Int(c.base->count.native++)));
+    write_table(c.base->lookup.native, CString("square"), OBJ(Int(c.base->count.native++)));
+    write_table(c.base->lookup.native, CString("prime"), OBJ(Int(c.base->count.native++)));
+    write_table(c.base->lookup.native, CString("file"), OBJ(Int(c.base->count.native++)));
+    write_table(c.base->lookup.native, CString("strstr"), OBJ(Int(c.base->count.native++)));
+    // write_table(c.base->lookup.native, CString("reverse"), OBJ(Int(c.base->count.native++)));
 
     advance_compiler(&c.parser);
 
@@ -2354,9 +2374,11 @@ Function *compile(const char *src)
 
     Function *f = end_compile(&c);
 
-    FREE(PTR(c.base->calls - 1));
-    FREE(PTR(c.base->classes - 1));
-    FREE(PTR(c.base->init_func.as.String));
+    FREE(PTR((c.base->lookup.call - 1)));
+    FREE(PTR((c.base->lookup.native - 1)));
+    FREE(PTR((c.base->lookup.class - 1)));
+    FREE(PTR((c.base->lookup.include - 1)));
+    FREE(PTR((c.base->hash.init.as.String)));
 
     return c.parser.err ? NULL : f;
 }
@@ -2368,29 +2390,31 @@ Function *compile_path(const char *src, const char *path, const char *name)
 
     init_compiler(&c, NULL, SCRIPT, func_name("SCRIPT"));
 
-    c.init_func = String("init");
     c.base = &c;
-    c.base->cwd = path;
-    c.base->current_file = name;
-    c.base->calls = GROW_TABLE(NULL, TABLE_SIZE);
-    c.base->classes = GROW_TABLE(NULL, TABLE_SIZE);
-    c.base->includes = GROW_TABLE(NULL, TABLE_SIZE);
-    c.base->natives = GROW_TABLE(NULL, TABLE_SIZE);
-    c.base->len = CString("len");
-    c.base->ar_push = CString("push");
-    c.base->ar_pop = CString("pop");
-    c.base->ar_reverse = CString("reverse");
+    c.base->meta.cwd = path;
+    c.base->meta.current_file = name;
+
+    c.base->lookup.call = GROW_TABLE(NULL, TABLE_SIZE);
+    c.base->lookup.class = GROW_TABLE(NULL, TABLE_SIZE);
+    c.base->lookup.include = GROW_TABLE(NULL, TABLE_SIZE);
+    c.base->lookup.native = GROW_TABLE(NULL, TABLE_SIZE);
+
+    c.base->hash.len = CString("len");
+    c.base->hash.init = String("init");
+    c.base->hash.push = CString("push");
+    c.base->hash.pop = CString("pop");
+    c.base->hash.reverse = CString("reverse");
 
     c.parser.panic = false;
     c.parser.err = false;
     c.parser.current_file = name;
 
-    write_table(c.base->natives, CString("clock"), OBJ(Int(c.base->native_count++)));
-    write_table(c.base->natives, CString("square"), OBJ(Int(c.base->native_count++)));
-    write_table(c.base->natives, CString("prime"), OBJ(Int(c.base->native_count++)));
-    write_table(c.base->natives, CString("file"), OBJ(Int(c.base->native_count++)));
-    write_table(c.base->natives, CString("strstr"), OBJ(Int(c.base->native_count++)));
-    // write_table(c.base->natives, CString("reverse"), OBJ(Int(c.base->native_count++)));
+    write_table(c.base->lookup.native, CString("clock"), OBJ(Int(c.base->count.native++)));
+    write_table(c.base->lookup.native, CString("square"), OBJ(Int(c.base->count.native++)));
+    write_table(c.base->lookup.native, CString("prime"), OBJ(Int(c.base->count.native++)));
+    write_table(c.base->lookup.native, CString("file"), OBJ(Int(c.base->count.native++)));
+    write_table(c.base->lookup.native, CString("strstr"), OBJ(Int(c.base->count.native++)));
+    // write_table(c.base->lookup.native, CString("reverse"), OBJ(Int(c.base->count.native++)));
 
     advance_compiler(&c.parser);
 
@@ -2401,10 +2425,11 @@ Function *compile_path(const char *src, const char *path, const char *name)
     Function *f = end_compile(&c);
 
     FREE(PTR(c.parser.current_file));
-    FREE(PTR((c.base->calls - 1)));
-    FREE(PTR((c.base->natives - 1)));
-    FREE(PTR((c.base->classes - 1)));
-    FREE(PTR((c.base->init_func.as.String)));
+    FREE(PTR((c.base->lookup.call - 1)));
+    FREE(PTR((c.base->lookup.native - 1)));
+    FREE(PTR((c.base->lookup.class - 1)));
+    FREE(PTR((c.base->lookup.include - 1)));
+    FREE(PTR((c.base->hash.init.as.String)));
 
     return c.parser.err ? NULL : f;
 }

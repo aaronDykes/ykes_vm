@@ -7,6 +7,7 @@ sr maf()
     s = strstr(s, "string!!", "vector");
     s = strstr(s, "string!!", "vector");
 
+
     s.reverse();
 
     pout(s);

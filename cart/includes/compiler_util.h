@@ -41,6 +41,13 @@ typedef struct Compiler Compiler;
 typedef struct ClassCompiler ClassCompiler;
 typedef void (*parse_fn)(Compiler *);
 typedef struct parse_rule PRule;
+typedef struct Counter Counter;
+typedef struct Flags Flags;
+typedef struct Lookup Lookup;
+typedef struct Hashes Hashes;
+typedef struct CurrentConstant CurrentConstant;
+typedef struct Meta Meta;
+typedef struct CompilerStacks CompilerStacks;
 
 struct Local
 {
@@ -61,49 +68,80 @@ struct ClassCompiler
     Arena instance_name;
 };
 
-struct Compiler
+struct Counter
 {
-    int local_count;
+    int local;
     int scope_depth;
-    int upvalue_count;
-    int call_count;
-    int param_count;
-    int class_count;
-    int native_count;
+    int upvalue;
+    int call;
+    int param;
+    int class;
+    int native;
+};
+
+struct Flags
+{
     bool first_expr;
     bool call_param;
+};
 
-    // const char *src;
-    uint8_t array_index;
-    uint8_t array_set;
-    uint8_t array_get;
+struct Lookup
+{
+    Table *call;
+    Table *class;
+    Table *include;
+    Table *native;
+};
 
-    ObjType type;
-    Function *func;
-
-    Parser parser;
-
-    Arena init_func;
+struct Hashes
+{
+    Arena init;
     Arena len;
-    Arena ar_push;
-    Arena ar_pop;
-    Arena ar_reverse;
+    Arena push;
+    Arena pop;
+    Arena reverse;
+    Arena remove;
+};
 
+struct CurrentConstant
+{
+    uint16_t array_index;
+    uint16_t array_set;
+    uint16_t array_get;
+};
+
+struct Meta
+{
+    ObjType type;
     const char *cwd;
     const char *current_file;
+};
+
+struct CompilerStacks
+{
+    Class *instance[CALL_COUNT];
+    Local local[LOCAL_COUNT];
+    Upvalue upvalue[LOCAL_COUNT];
+};
+
+struct Compiler
+{
+    Counter count;
+    Flags flag;
+
+    Lookup lookup;
+    Hashes hash;
+    CurrentConstant current;
+    Meta meta;
+
+    CompilerStacks stack;
+
+    Function *func;
+    Parser parser;
 
     Compiler *base;
     Compiler *enclosing;
     ClassCompiler *class_compiler;
-
-    Table *calls;
-    Table *classes;
-    Table *includes;
-    Table *natives;
-
-    Class *instances[CALL_COUNT];
-    Local locals[LOCAL_COUNT];
-    Upvalue upvalues[LOCAL_COUNT];
 };
 
 struct parse_rule
