@@ -1,18 +1,21 @@
 
 
-var a = [69, 2, 4, 5, 10];
-
-var b = [69.992, 2.12, 4433.12, 5.121, 1.69];
 
 
-a.sort();
-b.sort();
+sr sort_search()
+{
 
-a.reverse();
-b.reverse();
+    var a = [69, 2, 4, 5, 10];
+    var b = [69.992, 2.12, 4433.12, 5.121, 1.69];
 
-pout(a, b);
+    a.sort();
+    b.sort();
 
 
+    b.reverse();
+    
+    pout(a, b);
+    pout("Index of 69.992: " + b.bin_search(69.992));
+}
 
-pout(b.bin_search(69.992));
+sort_search();

@@ -10,11 +10,8 @@
 #include <math.h>
 #include <unistd.h>
 
-#define BIG_NIB(arg) \
-    ((arg >> 8) & 0xFF)
-
-#define LIL_NIB(arg) \
-    ((arg & 0xFF))
+#define CALL_PARAM(c) \
+    (c & _FLAG_CALL_PARAM_SET)
 
 static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
 {
@@ -33,8 +30,7 @@ static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena name)
     a->count.param = 0;
     a->count.native = 0;
 
-    a->flags &= _FLAG_FIRST_EXPR_RST;
-    a->flags &= _FLAG_CALL_PARAM_RST;
+    a->flags = 0;
 
     a->current.array_index = 0;
     a->current.array_set = 0;
@@ -1267,14 +1263,14 @@ static void pi(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1285,14 +1281,14 @@ static void euler(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
     else
     {
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1305,7 +1301,7 @@ static void dval(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
@@ -1313,7 +1309,7 @@ static void dval(Compiler *c)
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1325,7 +1321,7 @@ static void ival(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
@@ -1333,7 +1329,7 @@ static void ival(Compiler *c)
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1344,7 +1340,7 @@ static void llint(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
@@ -1352,7 +1348,7 @@ static void llint(Compiler *c)
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1363,7 +1359,7 @@ static void ch(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
@@ -1371,7 +1367,7 @@ static void ch(Compiler *c)
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1386,7 +1382,7 @@ static void boolean(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
@@ -1394,7 +1390,7 @@ static void boolean(Compiler *c)
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1412,7 +1408,7 @@ static void cstr(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
@@ -1420,7 +1416,7 @@ static void cstr(Compiler *c)
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1434,7 +1430,7 @@ static void string(Compiler *c)
     if (!c->flags)
     {
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
         c->flags |= _FLAG_FIRST_EXPR_SET;
     }
@@ -1442,7 +1438,7 @@ static void string(Compiler *c)
     {
 
         emit_bytes(c, OP_MOV_CNT_R2, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R2);
     }
 }
@@ -1455,7 +1451,7 @@ static void array_alloc(Compiler *c)
     {
         int arg = add_constant(&c->func->ch, OBJ(GROW_ARRAY(NULL, atoi(c->parser.pre.start), ARENA_INTS)));
         emit_bytes(c, OP_MOV_CNT_R1, arg);
-        if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+        if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
     }
     else if (match(TOKEN_ID, &c->parser))
@@ -1489,7 +1485,7 @@ static void vector_alloc(Compiler *c)
 
     emit_bytes(c, OP_MOV_CNT_R1, arg);
     emit_byte(c, OP_ALLOC_VECTOR);
-    if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+    if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1514,7 +1510,7 @@ static void stack_alloc(Compiler *c)
 
     emit_bytes(c, OP_MOV_CNT_R1, arg);
     emit_byte(c, OP_ALLOC_STACK);
-    if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+    if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1538,7 +1534,7 @@ static void table(Compiler *c)
     emit_bytes(c, OP_MOV_CNT_R1, cst);
     emit_byte(c, OP_ALLOC_TABLE);
 
-    if (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET))
+    if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
         emit_byte(c, OP_STR_E2);
 }
 
@@ -1637,7 +1633,7 @@ static Arena get_id(Compiler *c)
     else
     {
         emit_bytes(c, get, arg);
-        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET)))
+        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || (CALL_PARAM(c->flags))))
             emit_byte(c, 1);
         else if (get == OP_GET_GLOBAL)
             emit_byte(c, 0);
@@ -2251,7 +2247,7 @@ static void id(Compiler *c)
     else
     {
         emit_bytes(c, get, arg);
-        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || (c->flags & _FLAG_CALL_PARAM_SET)))
+        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || (CALL_PARAM(c->flags))))
 
             emit_byte(c, 1);
         else if (get == OP_GET_GLOBAL)

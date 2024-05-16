@@ -2519,48 +2519,6 @@ static void long_swap(long long int *c, long long int *s)
     *s = tmp;
 }
 
-static void rev(void *src, size_t len, T type)
-{
-    uint8_t *to = (uint8_t *)src + len;
-    uint8_t *from = (uint8_t *)src;
-
-    switch (type)
-    {
-    case ARENA_INTS:
-    {
-        int *t = (int *)to;
-        int *f = (int *)from;
-        for (; f < t; --t, ++f)
-            int_swap(f, t);
-        break;
-    }
-    case ARENA_DOUBLES:
-    {
-
-        double *t = (double *)to;
-        double *f = (double *)from;
-        for (; f < t; --t, ++f)
-            double_swap(f, t);
-        break;
-    }
-    case ARENA_LONGS:
-    {
-        long long int *t = (long long int *)to;
-        long long int *f = (long long int *)from;
-        for (; f < t; --t, ++f)
-            long_swap(f, t);
-        break;
-    }
-    case ARENA_CSTR:
-    case ARENA_STR:
-        for (; from < to; --to, ++from)
-            char_swap((char *)from, (char *)to);
-        break;
-    default:
-        return;
-    }
-}
-
 Element reverse_el(Element el)
 {
 
@@ -2569,29 +2527,34 @@ Element reverse_el(Element el)
     case ARENA_STR:
     case ARENA_CSTR:
     {
-        char *c = el.arena.as.String;
-        rev(c, el.arena.size - 1, el.arena.type);
-        return OBJ(CString(c));
+        char *from = el.arena.as.String;
+        char *to = el.arena.as.String + el.arena.size - 1;
+        for (; from < to; --to, ++from)
+            char_swap(from, to);
+        return el;
     }
     case ARENA_INTS:
     {
-        int *i = el.arena.listof.Ints;
-        rev(i, (el.arena.count - 1) * sizeof(int), el.arena.type);
-        el.arena.listof.Ints = i;
+        int *to = el.arena.listof.Ints + el.arena.count - 1;
+        int *from = el.arena.listof.Ints;
+        for (; from < to; --to, ++from)
+            int_swap(from, to);
         return el;
     }
     case ARENA_DOUBLES:
     {
-        double *i = el.arena.listof.Doubles;
-        rev(i, (el.arena.count - 1) * sizeof(double), el.arena.type);
-        el.arena.listof.Doubles = i;
+        double *to = el.arena.listof.Doubles + el.arena.count - 1;
+        double *from = el.arena.listof.Doubles;
+        for (; from < to; --to, ++from)
+            double_swap(from, to);
         return el;
     }
     case ARENA_LONGS:
     {
-        long long int *i = el.arena.listof.Longs;
-        rev(i, (el.arena.count - 1) * sizeof(long long int), el.arena.type);
-        el.arena.listof.Longs = i;
+        long long int *to = el.arena.listof.Longs + el.arena.count - 1;
+        long long int *from = el.arena.listof.Longs;
+        for (; from < to; --to, ++from)
+            long_swap(from, to);
         return el;
     }
     default:
@@ -2667,17 +2630,31 @@ static int bin_search_ints(int *base, int key, int n)
     int to = n;
     int from = 0;
 
-    while (from <= to)
-    {
-        int mid = (to + from) / 2;
+    if (base[0] < base[1])
 
-        if (base[mid] < key)
-            from = mid + 1;
-        else if (base[mid] > key)
-            to = mid - 1;
-        else
-            return mid;
-    }
+        while (from <= to)
+        {
+            int mid = (to + from) >> 1;
+
+            if (base[mid] < key)
+                from = mid + 1;
+            else if (base[mid] > key)
+                to = mid - 1;
+            else
+                return mid;
+        }
+    else
+        while (from <= to)
+        {
+            int mid = (to + from) >> 1;
+
+            if (base[mid] > key)
+                from = mid + 1;
+            else if (base[mid] < key)
+                to = mid - 1;
+            else
+                return mid;
+        }
 
     return -1;
 }
@@ -2687,42 +2664,69 @@ static int bin_search_doubles(double *base, double key, int n)
     int to = n;
     int from = 0;
 
-    while (from <= to)
-    {
-        int mid = (to + from) / 2;
+    if (base[0] < base[1])
+        while (from <= to)
+        {
+            int mid = (to + from) >> 1;
 
-        if (base[mid] < key)
-            from = mid + 1;
-        else if (base[mid] > key)
-            to = mid - 1;
-        else
-            return mid;
-    }
+            if (base[mid] < key)
+                from = mid + 1;
+            else if (base[mid] > key)
+                to = mid - 1;
+            else
+                return mid;
+        }
+
+    else
+        while (from <= to)
+        {
+            int mid = (to + from) >> 1;
+
+            if (base[mid] > key)
+                from = mid + 1;
+            else if (base[mid] < key)
+                to = mid - 1;
+            else
+                return mid;
+        }
 
     return -1;
 }
-static int bin_search_longs(long long int *base, long key, int n)
+static int bin_search_longs(long long int *base, long long int key, int n)
 {
 
     int to = n;
     int from = 0;
 
-    while (from <= to)
-    {
-        int mid = (to + from) / 2;
+    if (base[0] < base[1])
+        while (from <= to)
+        {
+            int mid = (to + from) >> 1;
 
-        if (base[mid] < key)
-            from = mid + 1;
-        else if (base[mid] > key)
-            to = mid - 1;
-        else
-            return mid;
-    }
+            if (base[mid] < key)
+                from = mid + 1;
+            else if (base[mid] > key)
+                to = mid - 1;
+            else
+                return mid;
+        }
+    else
+        while (from <= to)
+        {
+            int mid = (to + from) >> 1;
+
+            if (base[mid] > key)
+                from = mid + 1;
+            else if (base[mid] < key)
+                to = mid - 1;
+            else
+                return mid;
+        }
 
     return -1;
 }
 
-Arena search_arena(Arena ar, Arena key)
+Arena search_arena(Arena key, Arena ar)
 {
 
     switch (ar.type)
@@ -2732,11 +2736,7 @@ Arena search_arena(Arena ar, Arena key)
     case ARENA_DOUBLES:
         return Int(bin_search_doubles(ar.listof.Doubles, key.as.Double, ar.count - 1));
     case ARENA_LONGS:
-        return Int(bin_search_doubles(ar.listof.Doubles, key.as.Long, ar.count - 1));
-    // case ARENA_STRS:
-    // case ARENA_CSTR:
-    // case ARENA_STR:
-    // return ar;
+        return Int(bin_search_longs(ar.listof.Longs, key.as.Long, ar.count - 1));
     default:
         return Null();
     }

@@ -858,7 +858,7 @@ Interpretation run(void)
             PUSH(OBJ(sort_arena(POP().arena)));
             break;
         case OP_BIN_SEARCH_GLOB_ARRAY:
-            machine.r1 = search_arena(machine.r4, machine.r1);
+            machine.r1 = search_arena(machine.r1, machine.r4);
             break;
         case OP_BIN_SEARCH_LOCAL_ARRAY:
             PUSH(OBJ(search_arena(POP().arena, POP().arena)));

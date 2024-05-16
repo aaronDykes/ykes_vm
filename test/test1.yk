@@ -7,6 +7,7 @@ var p = Prime();
 var s = Stacky();
 var tab = TAB();
 var fib = FIB();
+var n = Nest(69, 10, 420);
 
 var c = CoffeeMaker("eggs for dinner");
 
@@ -17,8 +18,11 @@ s.res();
 tab.res();
 c.brew();
 
+pout(n.sum());
+
 rm(p);
 rm(s);
 rm(tab);
 rm(fib);
 rm(c);
+

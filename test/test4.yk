@@ -2,6 +2,6 @@
 
 var a = [10, 20, 30, 40];
 
-a.replace(30, 69);
 
-pout(a);
+
+pout(a.reverse());
