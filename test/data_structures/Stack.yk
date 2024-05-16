@@ -9,6 +9,7 @@ class Stacky
         this.s = Stack();
         this.size_ar = Array(["vector", "of", "vectors"]);
         this.cp_ar = Array(["This is", " a", " vector of vectors"]);
+        this.str = "This is a Cstr";
         this.vec = Vector();
         this.t = Table();
     }
@@ -21,16 +22,23 @@ class Stacky
         this.s.push(this.vec);
         this.s.push(this.cp_ar);
         this.s.push(this.size_ar);
+        this.s.push(this.str);
 
-        this.s.pop();
+
 
         this.t["Stacky"] = this.s;
+
         
 
 
 
         each (var i : this.t["Stacky"])
-            pout(i);
+        {
+
+            // pout(i);
+            for (var j = 0; j < i.len; j++)
+                pout(i[j]);
+        }
 
     }
 

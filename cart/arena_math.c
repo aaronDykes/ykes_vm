@@ -2246,7 +2246,7 @@ Element _get_each_access(Element b, int index)
             return OBJ(Double(*(b.arena.listof.Doubles + index)));
         case ARENA_STR:
         case ARENA_CSTR:
-            if (index > b.arena.count - 1)
+            if (index > b.arena.as.len - 1)
                 return nil;
             return OBJ(Char(*(b.arena.as.String + index)));
         case ARENA_STRS:
@@ -2286,7 +2286,7 @@ Element _get_access(Arena a, Element b)
             return OBJ(_access_doubles(b.arena.listof.Doubles, a, b.arena.count));
         case ARENA_STR:
         case ARENA_CSTR:
-            return OBJ(_access_string(b.arena.as.String, a, b.arena.count));
+            return OBJ(_access_string(b.arena.as.String, a, b.arena.as.len));
         case ARENA_STRS:
             return OBJ(_access_strings(b.arena.listof.Strings, a, b.arena.count));
         default:

@@ -735,7 +735,6 @@ static void each_statement(Compiler *c)
         _access(c);
 
     emit_byte(c, (c->count.scope_depth > 0) ? OP_EACH_LOCAL_ACCESS : OP_EACH_ACCESS);
-    // emit_byte(c, OP_EACH_ACCESS);
     int exit = emit_jump(c, (c->count.scope_depth > 0) ? OP_JMP_NIL_LOCAL : OP_JMP_NIL);
 
     emit_bytes(c, set, glob);
