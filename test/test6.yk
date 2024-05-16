@@ -1,0 +1,25 @@
+sr res()
+{
+
+    var s = Stack(); 
+    var size_ar = Array(["vector", "of", "vectors"]);
+    var cp_ar = Array(["This is", " a", " vector of vectors"]);
+    s.push(cp_ar);
+    s.push(size_ar);
+    s.push(size_ar);
+    s.push(size_ar);
+    s.push(size_ar);
+
+    s.pop();
+    s.pop();
+
+
+    each (var i : s)
+        pout(i);
+
+
+    rm(s);
+}
+
+
+res();

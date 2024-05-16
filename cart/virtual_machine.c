@@ -781,62 +781,30 @@ Interpretation run(void)
         case OP_POP_LOCAL_ARRAY_VAL:
         {
 
-            if (machine.e1.type == NULL_OBJ)
-                machine.e1 = OBJ(machine.r1);
+            // if (machine.e3.type == NULL_OBJ)
+            // machine.e3 = OBJ(machine.r1);
 
-            PUSH((machine.e1 = _pop_array_val(machine.e3)));
+            Element el = POP();
+            PUSH((machine.e1 = _pop_array_val(&el)));
+            PUSH(el);
 
-            if (machine.e3.type == STACK)
-            {
-                Stack **s = &machine.e3.stack;
-
-                --(*s)->count;
-            }
-            else if (machine.e3.type == ARENA)
-            {
-                Arena *a = &machine.e3.arena;
-                --a->count;
-            }
-            else if (machine.e3.type == VECTOR)
-            {
-                Arena **a = &machine.e3.arena_vector;
-                --(*a)->count;
-            }
+            // machine.e2 = machine.e3;
 
             break;
         }
         case OP_POP_GLOB_ARRAY_VAL:
         {
 
-            if (machine.e1.type == NULL_OBJ)
-                machine.e1 = OBJ(machine.r1);
+            if (machine.e3.type == NULL_OBJ)
+                machine.e3 = OBJ(machine.r1);
 
-            machine.e1 = _pop_array_val(machine.e3);
+            machine.e1 = _pop_array_val(&machine.e3);
 
-            if (machine.e3.type == STACK)
-            {
-                Stack **s = &machine.e3.stack;
+            machine.e2 = machine.e3;
 
-                --(*s)->count;
-            }
-            else if (machine.e3.type == ARENA)
-            {
-                Arena *a = &machine.e3.arena;
-                --a->count;
-            }
-            else if (machine.e3.type == VECTOR)
-            {
-                Arena **a = &machine.e3.arena_vector;
-                --(*a)->count;
-            }
-
-            // machine.e1 = _pop_array_val(machine.e2);
-            // machine.e2 = p;
             break;
         }
-        // case OP_PUSH:
-        // PUSH(machine.pop_val);
-        // break;
+
         case OP_CPY_ARRAY:
             machine.e1 = cpy_array(machine.e1);
             break;
@@ -900,8 +868,6 @@ Interpretation run(void)
             break;
         case OP_SET_PROP:
         {
-            // Element inst = NPEEK(1);
-
             Element el = POP();
             if (machine.e4.type != INSTANCE)
             {
@@ -910,7 +876,6 @@ Interpretation run(void)
             }
 
             Arena name = READ_CONSTANT().arena;
-            // machine.e3 = inst;
 
             write_table(machine.e4.instance->fields, name, el);
             break;

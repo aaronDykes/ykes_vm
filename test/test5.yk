@@ -1,7 +1,3 @@
-
-
-
-
 sr sort_search()
 {
 
@@ -12,10 +8,10 @@ sr sort_search()
     b.sort();
 
 
+    a.reverse();
     b.reverse();
     
-    pout(a, b);
-    pout("Index of 69.992: " + b.bin_search(69.992));
+    pout(b[-1]);
 }
 
 sort_search();

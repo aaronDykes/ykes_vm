@@ -1197,6 +1197,8 @@ long long int hash(Arena key)
 static void parse_str(const char *str)
 {
     char *s = (char *)str;
+    if (!str)
+        return;
 
     for (; *s; s++)
         if (*s == '\\' && s[1] == 'n')

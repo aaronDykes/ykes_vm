@@ -1684,6 +1684,10 @@ static void pop_array_val(Compiler *c)
     emit_byte(c, (c->count.scope_depth > 0)
                      ? OP_POP_LOCAL_ARRAY_VAL
                      : OP_POP_GLOB_ARRAY_VAL);
+    emit_bytes(c, c->current.array_set, c->current.array_index);
+    if (c->count.scope_depth > 0)
+        emit_byte(c, OP_POP);
+
     consume(TOKEN_CH_RPAREN, "Expect `)` after push expression.", &c->parser);
 }
 

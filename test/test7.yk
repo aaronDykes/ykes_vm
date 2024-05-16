@@ -1,0 +1,35 @@
+sr vec()
+{
+    var ar = Vector();
+    var size_ar = Array(["vector", "of", "vectors"]);
+    var another = Array(["another", "vector", "of", "vectors"]);
+    var last = Array(["wow", "wow", "WOW", "unbelieveable", "another", "vector", "of", "vectors"]);
+
+
+    size_ar.pop();
+    size_ar.pop();
+
+
+    ar[0] = size_ar;
+    ar[1] = another;
+    ar[2] = last;
+    ar[3] = last;
+    ar[4] = last;
+    ar[5] = last;
+
+    // ar.pop();
+    // ar.pop();
+    // ar.pop();
+
+
+    each (var i : ar)
+        pout(i);
+
+
+
+
+    rm(ar); 
+
+}
+
+vec();
