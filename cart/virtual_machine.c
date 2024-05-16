@@ -781,14 +781,9 @@ Interpretation run(void)
         case OP_POP_LOCAL_ARRAY_VAL:
         {
 
-            // if (machine.e3.type == NULL_OBJ)
-            // machine.e3 = OBJ(machine.r1);
-
             Element el = POP();
             PUSH((machine.e1 = _pop_array_val(&el)));
             PUSH(el);
-
-            // machine.e2 = machine.e3;
 
             break;
         }
@@ -799,9 +794,8 @@ Interpretation run(void)
                 machine.e3 = OBJ(machine.r1);
 
             machine.e1 = _pop_array_val(&machine.e3);
-
             machine.e2 = machine.e3;
-
+            // machine.e3 = null_obj();
             break;
         }
 

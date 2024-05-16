@@ -6,8 +6,8 @@ sr vec()
     var last = Array(["wow", "wow", "WOW", "unbelieveable", "another", "vector", "of", "vectors"]);
 
 
-    size_ar.pop();
-    size_ar.pop();
+
+
 
 
     ar[0] = size_ar;
@@ -17,13 +17,20 @@ sr vec()
     ar[4] = last;
     ar[5] = last;
 
-    // ar.pop();
-    // ar.pop();
-    // ar.pop();
+
+
+    ar.pop();
+    ar.pop();
 
 
     each (var i : ar)
+    {
         pout(i);
+
+        for (var j = 0; j < i.len; j++)
+            pout(i[j], i[j].len);
+
+    }
 
 
 
