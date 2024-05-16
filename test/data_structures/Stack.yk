@@ -35,7 +35,6 @@ class Stacky
         each (var i : this.t["Stacky"])
         {
 
-            // pout(i);
             for (var j = 0; j < i.len; j++)
                 pout(i[j]);
         }

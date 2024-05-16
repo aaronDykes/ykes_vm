@@ -738,12 +738,8 @@ Interpretation run(void)
             machine.argc = 0;
             break;
         case OP_EACH_LOCAL_ACCESS:
-        {
-            // if (machine.e1.type == NULL_OBJ)
-            // machine.e1 = OBJ(machine.r1);
             PUSH(_get_each_access(PEEK(), machine.cargc++));
             break;
-        }
         case OP_EACH_ACCESS:
         {
             if (machine.e1.type == NULL_OBJ)
