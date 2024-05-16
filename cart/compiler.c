@@ -591,24 +591,29 @@ static void statement(Compiler *c)
 static void rm_statement(Compiler *c)
 {
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to rm expression.", &c->parser);
-    if (match(TOKEN_ID, &c->parser))
-        ;
 
-    Arena ar = parse_id(c);
-    uint8_t get;
-    int arg = resolve_local(c, &ar);
-
-    if (arg != -1)
-        get = OP_GET_LOCAL;
-    else if ((arg = resolve_upvalue(c, &ar)) != -1)
-        get = OP_GET_UPVALUE;
+    if (match(TOKEN_THIS, &c->parser))
+        _this(c);
     else
-    {
-        arg = add_constant(&c->func->ch, OBJ(ar));
-        get = OP_GET_GLOBAL;
-    }
+        id(c);
 
-    emit_bytes(c, get, arg);
+    // if ()
+    // expression(c);
+    // Arena ar = parse_id(c);
+    // uint8_t get;
+    // int arg = resolve_local(c, &ar);
+
+    // if (arg != -1)
+    //     get = OP_GET_LOCAL;
+    // else if ((arg = resolve_upvalue(c, &ar)) != -1)
+    //     get = OP_GET_UPVALUE;
+    // else
+    // {
+    //     arg = add_constant(&c->func->ch, OBJ(ar));
+    //     get = OP_GET_GLOBAL;
+    // }
+
+    // emit_bytes(c, get, arg);
     emit_byte(c, (c->count.scope_depth > 0) ? OP_RM_LOCAL : OP_RM);
     consume(TOKEN_CH_RPAREN, "Expect `)` after rm statement", &c->parser);
     consume(TOKEN_CH_SEMI, "Expect `;` at end of statement", &c->parser);
@@ -721,7 +726,10 @@ static void each_statement(Compiler *c)
 
     int start = c->func->ch.op_codes.count;
 
-    id(c);
+    if (match(TOKEN_THIS, &c->parser))
+        _this(c);
+    else
+        id(c);
 
     emit_byte(c, (c->count.scope_depth > 0) ? OP_EACH_LOCAL_ACCESS : OP_EACH_ACCESS);
     // emit_byte(c, OP_EACH_ACCESS);
@@ -1726,10 +1734,8 @@ static void search_array(Compiler *c)
     if (c->count.scope_depth > 0)
         emit_byte(c, OP_BIN_SEARCH_LOCAL_ARRAY);
     else
-    {
         emit_byte(c, OP_BIN_SEARCH_GLOB_ARRAY);
-        // emit_bytes(c, c->current.array_set, c->current.array_index);
-    }
+
     consume(TOKEN_CH_RPAREN, "Expect `)` after call to reverse.", &c->parser);
 }
 
@@ -1740,6 +1746,9 @@ static void _this(Compiler *c)
         error("ERROR: can't use `this` keyword outside of a class body.", &c->parser);
         return;
     }
+
+    if (match(TOKEN_CH_DOT, &c->parser))
+        dot(c);
 }
 
 static void dot(Compiler *c)

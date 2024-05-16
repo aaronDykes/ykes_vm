@@ -4,30 +4,35 @@
 class Stacky
 {
 
+    init()
+    {
+        this.s = Stack();
+        this.size_ar = Array(["vector", "of", "vectors"]);
+        this.cp_ar = Array(["This is", " a", " vector of vectors"]);
+        this.vec = Vector();
+    }
+
     res()
     {
+        this.vec.push(this.size_ar);
+        this.vec.push(this.cp_ar);
 
-        var s = Stack(); 
-        var size_ar = Array(["vector", "of", "vectors"]);
-        var cp_ar = Array(["This is", " a", " vector of vectors"]);
+        this.s.push(this.vec);
+        this.s.push(this.cp_ar);
+        this.s.push(this.size_ar);
 
-        var vec = Vector();
-
-        vec.push(size_ar);
-        vec.push(cp_ar);
-
-        s.push(vec);
-        s.push(cp_ar);
-        s.push(size_ar);
-
-        s.pop();
+        this.s.pop();
 
 
-        each (var i : s)
+
+        each (var i : this.s)
             pout(i);
 
+    }
 
-        rm(s);
+    destroy()
+    {
+        rm(this.s);
     }
 
 

@@ -15,6 +15,7 @@ p.res();
 fib.res();
 
 s.res();
+s.destroy();
 tab.res();
 c.brew();
 
