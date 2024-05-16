@@ -1358,24 +1358,24 @@ void print_line(Element ar)
     }
     if (ar.type == VECTOR)
     {
-        printf("[");
+        printf("{");
 
         int count = (ar.arena_vector - 1)->count;
         if (count == 0)
         {
-            printf(" ]\n");
+            printf(" }\n");
             return;
         }
 
-        printf("\n");
+        printf("\n\t");
         for (int i = 0; i < (ar.arena_vector - 1)->count; i++)
         {
             print(OBJ(ar.arena_vector[i]));
             if (i != (ar.arena_vector - 1)->count - 1)
-                printf(", ");
+                printf(",\n\t");
         }
 
-        printf("\n]\n");
+        printf("\n}\n");
         return;
     }
 
