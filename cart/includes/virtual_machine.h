@@ -27,6 +27,9 @@ struct vm
     int argc;
     int cargc;
 
+    size_t bytes_allocated;
+    size_t next_gc;
+
     Element
         e1,
         e2,

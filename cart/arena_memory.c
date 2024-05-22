@@ -595,6 +595,7 @@ void *alloc_ptr(size_t size)
     Free *prev = NULL;
     Free *free = NULL;
     Free *alloced = NULL;
+    machine.bytes_allocated += size;
 
     for (free = mem->next; free && free->size < size; free = free->next)
         prev = free;
@@ -670,6 +671,7 @@ Arena *arena_realloc_arena(Arena *ar, size_t size)
     }
     if (size == 0)
     {
+        machine.bytes_allocated -= (ar - 1)->size;
         arena_free_arena(ar);
         --ar;
         ar = NULL;
@@ -677,6 +679,7 @@ Arena *arena_realloc_arena(Arena *ar, size_t size)
     }
 
     ptr = arena_alloc_arena(size);
+    machine.bytes_allocated -= (ar - 1)->size;
 
     if (size > (ar - 1)->size)
     {
@@ -684,6 +687,9 @@ Arena *arena_realloc_arena(Arena *ar, size_t size)
 
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
+#else
+        if (machine.bytes_allocated > machine.next_gc)
+            collect_garbage();
 #endif
     }
     else
@@ -704,6 +710,8 @@ void arena_free_arena(Arena *ar)
 {
     if (!(ar - 1))
         return;
+
+    machine.bytes_allocated -= (ar - 1)->size;
 
     if ((ar - 1)->count == 0)
     {
@@ -726,6 +734,7 @@ void arena_free_arena(Arena *ar)
         case ARENA_FUNC:
         case ARENA_NATIVE:
         case ARENA_VAR:
+            machine.bytes_allocated -= ar[i].size;
             ARENA_FREE(&ar[i]);
             break;
         default:
@@ -750,6 +759,7 @@ Arena arena_realloc(Arena *ar, size_t size, T type)
 
     if (size == 0)
     {
+        machine.bytes_allocated -= ar->size;
         ARENA_FREE(ar);
         return Null();
     }
@@ -760,6 +770,7 @@ Arena arena_realloc(Arena *ar, size_t size, T type)
     if (!ar && size != 0)
         return arena_init(ptr, size, type);
 
+    machine.bytes_allocated -= ar->size;
     size_t new_size = 0;
 
     if (size > ar->size)
@@ -767,6 +778,9 @@ Arena arena_realloc(Arena *ar, size_t size, T type)
         new_size = ar->size;
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
+#else
+        if (machine.bytes_allocated > machine.next_gc)
+            collect_garbage();
 #endif
     }
     else
@@ -1133,6 +1147,7 @@ void free_class(Class *c)
 
     ARENA_FREE(&c->name);
     arena_free_table(c->closures);
+    machine.bytes_allocated -= sizeof(Class);
     FREE(PTR(c));
 }
 
@@ -1169,6 +1184,7 @@ Stack *realloc_stack(Stack *st, size_t size)
 
     if (size == 0)
     {
+        machine.bytes_allocated -= (st - 1)->size;
         FREE_STACK(&st);
         --st;
         st = NULL;
@@ -1179,6 +1195,7 @@ Stack *realloc_stack(Stack *st, size_t size)
 
     if (!st)
         return s;
+    machine.bytes_allocated -= (st - 1)->size;
 
     size_t new_size = 0;
     if (size > (st - 1)->size)
@@ -1187,6 +1204,9 @@ Stack *realloc_stack(Stack *st, size_t size)
 
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
+#else
+        if (machine.bytes_allocated > machine.next_gc)
+            collect_garbage();
 #endif
     }
     else
@@ -1415,6 +1435,7 @@ void free_native(Native *native)
 
     if (!native)
         return;
+    machine.bytes_allocated -= sizeof(Native);
 
     ARENA_FREE(&native->obj);
     FREE(PTR(native));
@@ -1443,6 +1464,8 @@ void free_closure(Closure **closure)
 {
     if (!(*closure))
         return;
+
+    machine.bytes_allocated -= sizeof(Closure);
 
     FREE_UPVALS((*closure)->upvals);
     FREE(PTR(closure));
@@ -1507,6 +1530,8 @@ void arena_free_table(Table *t)
         return;
 
     size_t size = (t - 1)->size;
+
+    machine.bytes_allocated -= (t - 1)->size;
 
     if ((t - 1)->count == 0)
     {

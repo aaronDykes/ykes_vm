@@ -1,4 +1,5 @@
 #include "arena_table.h"
+#include "virtual_machine.h"
 
 void insert_entry(Table **t, Table entry)
 {
@@ -382,6 +383,9 @@ Table *arena_realloc_table(Table *t, size_t size)
 
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
+#else
+        if (machine.bytes_allocated > machine.next_gc)
+            collect_garbage();
 #endif
     }
     else
@@ -431,9 +435,12 @@ void write_table(Table *t, Arena a, Element b)
 
     if (load_capacity < (t - 1)->count + 1)
     {
+        int tmp = (t - 1)->len;
         (t - 1)->len *= INC;
         t = GROW_TABLE(t, t->len);
+        machine.bytes_allocated -= tmp;
     }
+
     (t - 1)->count++;
 
 OVERWRITE:

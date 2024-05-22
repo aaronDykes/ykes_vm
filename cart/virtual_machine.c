@@ -17,6 +17,9 @@ void initVM(void)
     machine.native_calls = NULL;
     machine.glob = NULL;
 
+    machine.bytes_allocated = 0;
+    machine.next_gc = 1024 * 1024;
+
     machine.stack = GROW_STACK(NULL, STACK_SIZE);
     machine.call_stack = GROW_STACK(NULL, STACK_SIZE);
     machine.class_stack = GROW_STACK(NULL, STACK_SIZE);
