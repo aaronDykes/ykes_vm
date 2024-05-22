@@ -1680,10 +1680,15 @@ static void _set_strings_index(Arena *Strings, Arena index, char *String)
         {
             if (index.as.Int + count < 0)
                 goto ERR;
+
+            if (Strings->listof.Strings[index.as.Int + count] != NULL)
+                FREE(PTR(Strings->listof.Strings[index.as.Int + count]));
             Strings->listof.Strings[index.as.Int + count] = String;
             return;
         }
 
+        if (Strings->listof.Strings[index.as.Int] != NULL)
+            FREE(PTR(Strings->listof.Strings[index.as.Int]));
         Strings->listof.Strings[index.as.Int] = String;
         return;
     case ARENA_LONG:
@@ -1696,9 +1701,14 @@ static void _set_strings_index(Arena *Strings, Arena index, char *String)
         {
             if (index.as.Long + count < 0)
                 goto ERR;
+            if (Strings->listof.Strings[index.as.Int + count] != NULL)
+                FREE(PTR(Strings->listof.Strings[index.as.Int + count]));
+
             Strings->listof.Strings[index.as.Long + count] = String;
             return;
         }
+        if (Strings->listof.Strings[index.as.Int] != NULL)
+            FREE(PTR(Strings->listof.Strings[index.as.Int]));
         Strings->listof.Strings[index.as.Long] = String;
         return;
     case ARENA_CHAR:
@@ -1706,6 +1716,8 @@ static void _set_strings_index(Arena *Strings, Arena index, char *String)
             Strings->count = (int)index.as.Char;
         else if ((int)index.as.Char > count - 1 && (int)index.as.Char >= len)
             goto ERR;
+        if (Strings->listof.Strings[index.as.Int] != NULL)
+            FREE(PTR(Strings->listof.Strings[index.as.Int]));
         Strings->listof.Strings[(int)index.as.Char] = String;
         return;
     default:
@@ -2294,7 +2306,6 @@ Element _get_access(Arena a, Element b)
         }
     case TABLE:
         return find_entry(&b.table, &a);
-
     case VECTOR:
         return OBJ(_access_arena(b.arena_vector, a, (b.arena_vector - 1)->count));
     case STACK:

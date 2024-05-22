@@ -379,6 +379,7 @@ static PRule rules[] = {
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
 };
 
+static void mark_compiler_roots(Compiler *c);
 static Function *end_compile(Compiler *a);
 static void init_compiler(Compiler *a, Compiler *b, ObjType type, Arena ar);
 

@@ -79,8 +79,6 @@
     native_fn(n)
 #define CLOSURE(c) \
     closure(c)
-#define UPVAL(c) \
-    upval_el(c)
 #define CLASS(c) \
     new_class(c)
 #define BOUND(c) \
@@ -89,6 +87,9 @@
     new_instance(c)
 #define TABLE(t) \
     table_el(t)
+
+#define UPVAL(u) \
+    up_el(u)
 
 #define STK(stk) \
     stack_el(stk)
@@ -108,6 +109,7 @@ union Free
 
     struct
     {
+        bool mark;
         size_t size;
         Free *next;
     };
@@ -123,9 +125,18 @@ Arena *arena_alloc_arena(size_t size);
 Arena *arena_realloc_arena(Arena *ar, size_t size);
 void arena_free_arena(Arena *ar);
 
+bool _null(Element el);
+
+void mark_obj(Element el);
+void mark_value(Element el);
+void mark_table(Table **t);
+void collect_garbage(void);
+void free_garbage(void);
+
+void sweep(void);
+
 void *alloc_ptr(size_t size);
 void free_ptr(Free *new);
-void free_garbage(Free **new);
 
 Arena arena_init(void *data, size_t size, T type);
 Arena arena_alloc(size_t size, T type);
@@ -185,6 +196,8 @@ Element new_class(Class *classc);
 Element new_instance(Instance *ci);
 Element table_el(Table *t);
 Element vector(Arena *vect);
+Element Func(Function *f);
+Element up_el(Upval *u);
 Element null_obj(void);
 
 Function *function(Arena name);

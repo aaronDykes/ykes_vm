@@ -1,28 +1,15 @@
 
-var okay=69420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
-var okay=69420;
-var right_on=420;
+
+sr maf()
+{
+
+    var ar = ["str", "cstr", "waiting"];
+
+
+    ar.push("aa");
+
+    pout(ar);
+
+}
+
+maf();

@@ -25,6 +25,7 @@ void initVM(void)
 
     machine.argc = 0;
     machine.cargc = 0;
+
     machine.r1 = Int(0);
     machine.r2 = Int(0);
     machine.r3 = Int(0);
@@ -34,6 +35,7 @@ void initVM(void)
     machine.e1 = null_obj();
     machine.e2 = null_obj();
     machine.e3 = null_obj();
+    machine.e4 = null_obj();
 
     define_native(native_name("clock"), clock_native);
     define_native(native_name("square"), square_native);
@@ -381,17 +383,11 @@ static void free_asterisk(Element el)
     switch (el.type)
     {
     case ARENA:
-        if (el.arena.type == ARENA_VAR)
-            delete_entry(&machine.glob, el.arena);
-        else
-            ARENA_FREE(&el.arena);
+        ARENA_FREE(&el.arena);
         break;
     case SCRIPT:
     case CLOSURE:
         FREE_CLOSURE(&el.closure);
-        break;
-    case CLASS:
-        FREE_CLASS(el.classc);
         break;
     case INSTANCE:
         FREE_INSTANCE(el.instance);
@@ -399,6 +395,13 @@ static void free_asterisk(Element el)
     case TABLE:
         FREE_TABLE(el.table);
         break;
+    case VECTOR:
+        FREE_ARENA(el.arena_vector);
+        break;
+    case STACK:
+        FREE_STACK(&el.stack);
+        break;
+
     default:
         return;
     }
@@ -470,7 +473,6 @@ Interpretation run(void)
     CallFrame *frame = &machine.frames[machine.frame_count - 1];
 
 #define READ_BYTE() (*frame->ip++)
-// #define READ_BYTE() (((READ_BYTE() << 8) & 0xFF) | READ_BYTE() & 0xFF)
 #define READ_CONSTANT() ((frame->closure->func->ch.constants + READ_BYTE())->as)
 
 #define PEEK() ((machine.stack->top - 1)->as)
@@ -710,7 +712,7 @@ Interpretation run(void)
         case OP_GET_LOCAL_ACCESS:
         {
 
-            Element el = _get_access(POP().arena, POP());
+            Element el = _get_access(POP().arena, PEEK());
 
             if (el.type == NULL_OBJ)
                 return INTERPRET_RUNTIME_ERR;
@@ -731,7 +733,8 @@ Interpretation run(void)
             if (machine.e1.type == NULL_OBJ)
                 machine.e1 = OBJ(machine.r1);
 
-            _set_access(POP(), machine.r4, machine.e3);
+            _set_access(POP(), PEEK().arena, machine.e3);
+            // PUSH(machine.e3);
             break;
         case OP_RESET_ARGC:
             machine.cargc = 0;
@@ -765,11 +768,12 @@ Interpretation run(void)
         case OP_PUSH_LOCAL_ARRAY_VAL:
         {
 
-            Element res = _push_array_val(POP(), machine.e3);
+            Element res = _push_array_val(POP(), PEEK());
 
             if (res.type != NULL_OBJ)
             {
                 machine.e1 = res;
+                PUSH(res);
                 break;
             }
             return INTERPRET_RUNTIME_ERR;
@@ -997,15 +1001,32 @@ Interpretation run(void)
         }
 
         case OP_SET_LOCAL:
+        {
 
-            LOCAL() = PEEK();
+            uint16_t index = READ_BYTE();
+
+            Element el = (frame->slots + index)->as;
+            // if (!_null(el))
+            // free_asterisk(el);
+
+            frame->slots[index].as = PEEK();
+
             break;
+        }
 
         case OP_SET_LOCAL_PARAM:
-            LOCAL() = (machine.cargc < machine.argc)
-                          ? (frame->slots + machine.cargc++)->as
-                          : PEEK();
+        {
+
+            uint16_t index = READ_BYTE();
+            // if (!_null((frame->slots + index)->as))
+            // free_asterisk((frame->slots + index)->as);
+
+            frame->slots[index].as = (machine.cargc < machine.argc)
+                                         ? (frame->slots + machine.cargc++)->as
+                                         : PEEK();
             break;
+        }
+
         case OP_GET_CLOSURE:
             machine.e2 = (machine.call_stack + READ_BYTE())->as;
             machine.e1 = machine.e2;
@@ -1020,7 +1041,7 @@ Interpretation run(void)
         case OP_GET_CLASS:
 
             machine.e4 = INSTANCE(instance((machine.class_stack + READ_BYTE())->as.classc));
-            machine.e4.instance->fields = GROW_TABLE(NULL, TABLE_SIZE);
+            machine.e4.instance->fields = GROW_TABLE(NULL, NATIVE_STACK_SIZE);
             break;
 
         case OP_RM:

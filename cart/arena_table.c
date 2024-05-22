@@ -9,6 +9,7 @@ void insert_entry(Table **t, Table entry)
 
     if (e.key.type == ARENA_NULL)
     {
+        FREE_ENTRY(tmp[index].val);
         tmp[index] = entry;
         return;
     }
@@ -376,7 +377,13 @@ Table *arena_realloc_table(Table *t, size_t size)
     size_t new_size = 0;
 
     if (size > (t - 1)->size)
+    {
         new_size = (t - 1)->size;
+
+#ifdef DEBUG_STRESS_GC
+        collect_garbage();
+#endif
+    }
     else
         new_size = size;
 
@@ -436,7 +443,7 @@ OVERWRITE:
 Table *arena_alloc_table(size_t size)
 {
     Table *t = NULL;
-    t = ALLOC((size * sizeof(Table)) + OFFSET);
+    t = ALLOC((size * sizeof(Table)) + sizeof(Table));
 
     size_t n = (size_t)size + 1;
 

@@ -10,20 +10,16 @@ class Fizzbang
             {
                 str = "FIZZBANG: " + i;
                 pout(str);
-                rm(str);
             }
             elif (i % 5== 0)
             {
                 str = "BANG: " + i;
                 pout(str);
-                rm(str);
             }
             elif (i % 3 == 0)
             {
-
                 str = "FIZZ: " + i;
                 pout(str);
-                rm(str);
             }
             else 
                 pout(i);

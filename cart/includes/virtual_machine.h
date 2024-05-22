@@ -21,16 +21,11 @@ struct CallFrame
     Stack *slots;
 };
 
-#define ZERO_FLAG 0x01
-#define NEG_FLAG 0x02
-
 struct vm
 {
     int frame_count;
     int argc;
     int cargc;
-
-    uint8_t flags;
 
     Element
         e1,
@@ -48,34 +43,19 @@ struct vm
     CallFrame frames[FRAMES_MAX];
     Stack *stack;
 
+    Stack *gray_stack;
+    Free *gc_work_list;
+    Free *gc_work_list_head;
+
     Stack *call_stack;
-    Stack *method_call_stack;
     Stack *class_stack;
     Stack *native_calls;
 
-    // Element pop_val;
     Upval *open_upvals;
     Table *glob;
 };
 
-// struct vm
-// {
-//     int frame_count;
-//     int argc;
-//     int cargc;
-
-//     CallFrame frames[FRAMES_MAX];
-//     Stack *stack;
-//     Stack *call_stack;
-//     Stack *method_call_stack;
-//     Stack *class_stack;
-//     Stack *native_calls;
-//     Element pop_val;
-//     Upval *open_upvals;
-//     Table *glob;
-// };
-
-static vm machine;
+vm machine;
 
 void initVM(void);
 void freeVM(void);

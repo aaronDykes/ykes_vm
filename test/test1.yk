@@ -8,6 +8,7 @@ var s = Stacky();
 var tab = TAB();
 var fib = FIB();
 var n = Nest(69, 10, 420);
+// var fiz = Fizzbang();
 
 var c = CoffeeMaker("eggs for dinner");
 
@@ -15,15 +16,11 @@ p.res();
 fib.res();
 
 s.res();
-s.destroy();
 tab.res();
 c.brew();
 
+
 pout(n.sum());
 
-rm(p);
-rm(s);
-rm(tab);
-rm(fib);
-rm(c);
+
 

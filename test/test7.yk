@@ -1,10 +1,18 @@
 sr vec()
 {
     var ar = Vector();
-    var size_ar = Array(["vector", "of", "vectors"]);
-    var another = Array(["another", "vector", "of", "vectors"]);
-    var last = Array(["wow", "wow", "WOW", "unbelieveable", "another", "vector", "of", "vectors"]);
+    var size_ar = ["vector", "of", "vectors"];
+    var another = ["another", "vector", "of", "vectors"];
+    var last = ["wow", "wow", "WOW", "unbelieveable", "another", "vector", "of", "vectors"];
+    var iar = [69, 1, 112341, 420, 69];
 
+
+    size_ar.push("aa");
+    another.push("long");
+
+    iar.sort();
+    pout(iar);
+    iar.reverse();
 
 
 
@@ -12,14 +20,12 @@ sr vec()
 
     ar[0] = size_ar;
     ar[1] = another;
-    ar[2] = last;
+    ar[2] = iar;
     ar[3] = last;
     ar[4] = last;
-    ar[5] = last;
 
 
 
-    ar.pop();
     ar.pop();
 
 
@@ -35,7 +41,6 @@ sr vec()
 
 
 
-    rm(ar); 
 
 }
 

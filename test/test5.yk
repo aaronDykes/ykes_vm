@@ -11,7 +11,7 @@ sr sort_search()
     a.reverse();
     b.reverse();
     
-    pout(b[-1]);
+    pout(b, b.bin_search(5.121));
 }
 
 sort_search();

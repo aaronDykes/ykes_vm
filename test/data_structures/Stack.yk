@@ -28,8 +28,6 @@ class Stacky
 
         this.t["Stacky"] = this.s;
 
-        
-
 
 
         each (var i : this.t["Stacky"])
@@ -41,11 +39,7 @@ class Stacky
 
     }
 
-    destroy()
-    {
-        rm(this.s);
-        rm(this.t);
-    }
+
 
 
 }

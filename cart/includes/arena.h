@@ -300,7 +300,7 @@ union Vector
     char **Strings;
     bool *Bools;
     void *Void;
-    size_t Sizes;
+    size_t *Sizes;
 };
 
 struct Value
@@ -331,6 +331,7 @@ struct Arena
 {
     size_t size;
     T type;
+    bool mark;
 
     union
     {
@@ -355,6 +356,7 @@ struct Chunk
 
 struct Function
 {
+    bool mark;
     int arity;
     int upvalue_count;
     Arena name;
@@ -363,6 +365,7 @@ struct Function
 
 struct Closure
 {
+    bool mark;
     Function *func;
     Upval **upvals;
     int upval_count;
@@ -370,6 +373,7 @@ struct Closure
 
 struct Native
 {
+    bool mark;
     int arity;
     Arena obj;
     NativeFn fn;
@@ -387,14 +391,17 @@ struct Element
         Closure *closure;
         Class *classc;
         Instance *instance;
+        Upval *upval;
         Table *table;
         Stack *stack;
+        Function *function;
         void *null;
     };
 };
 
 struct Class
 {
+    bool mark;
     Closure *init;
     Arena name;
     Table *closures;
@@ -402,12 +409,14 @@ struct Class
 
 struct Instance
 {
+    bool mark;
     Class *classc;
     Table *fields;
 };
 
 struct Stack
 {
+    bool mark;
     int count;
     int len;
     size_t size;
@@ -417,6 +426,7 @@ struct Stack
 
 struct Upval
 {
+    bool mark;
     int len;
     int count;
     size_t size;
@@ -427,13 +437,16 @@ struct Upval
 
 struct Table
 {
-    size_t size;
-    Arena key;
-    ObjType type;
+    bool mark;
     int count;
     int len;
 
+    size_t size;
+    ObjType type;
+
+    Arena key;
     Element val;
+
     Table *next;
     Table *prev;
 };

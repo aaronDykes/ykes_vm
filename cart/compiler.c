@@ -400,6 +400,7 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
         emit_byte(c, tmp->stack.upvalue[i].islocal ? 1 : 0);
         emit_byte(c, (uint8_t)tmp->stack.upvalue[i].index);
     }
+    mark_compiler_roots(c);
 }
 
 static void call(Compiler *c)
@@ -407,7 +408,6 @@ static void call(Compiler *c)
     uint8_t argc = argument_list(c);
 
     emit_bytes(c, (c->count.scope_depth > 0) ? OP_CALL_LOCAL : OP_CALL, argc);
-    // emit_bytes(c, OP_CALL, argc);
 }
 
 static int argument_list(Compiler *c)
@@ -479,6 +479,8 @@ static void func_body(Compiler *c, ObjType type, Arena ar)
         emit_byte(c, tmp->stack.upvalue[i].islocal ? 1 : 0);
         emit_byte(c, (uint8_t)tmp->stack.upvalue[i].index);
     }
+
+    mark_compiler_roots(c);
 }
 
 static void func_var(Compiler *c)
@@ -597,23 +599,6 @@ static void rm_statement(Compiler *c)
     else
         id(c);
 
-    // if ()
-    // expression(c);
-    // Arena ar = parse_id(c);
-    // uint8_t get;
-    // int arg = resolve_local(c, &ar);
-
-    // if (arg != -1)
-    //     get = OP_GET_LOCAL;
-    // else if ((arg = resolve_upvalue(c, &ar)) != -1)
-    //     get = OP_GET_UPVALUE;
-    // else
-    // {
-    //     arg = add_constant(&c->func->ch, OBJ(ar));
-    //     get = OP_GET_GLOBAL;
-    // }
-
-    // emit_bytes(c, get, arg);
     emit_byte(c, (c->count.scope_depth > 0) ? OP_RM_LOCAL : OP_RM);
     consume(TOKEN_CH_RPAREN, "Expect `)` after rm statement", &c->parser);
     consume(TOKEN_CH_SEMI, "Expect `;` at end of statement", &c->parser);
@@ -888,7 +873,6 @@ static void null_coalescing_statement(Compiler *c)
     emit_byte(c, OP_POP);
     expression(c);
     patch_jump(c, exit);
-    // emit_byte(c, OP_POP);
 }
 
 static void return_statement(Compiler *c)
@@ -906,6 +890,7 @@ static void return_statement(Compiler *c)
         c->flags &= _FLAG_FIRST_EXPR_RST;
         consume(TOKEN_CH_SEMI, "ERROR: Expect semi colon after return statement.", &c->parser);
         // if (c->count.scope_depth > 0)
+
         emit_byte(c, OP_RETURN);
     }
 }
@@ -1686,6 +1671,7 @@ static void push_array_val(Compiler *c)
     emit_byte(c, (c->count.scope_depth > 0)
                      ? OP_PUSH_LOCAL_ARRAY_VAL
                      : OP_PUSH_GLOB_ARRAY_VAL);
+    emit_bytes(c, c->current.array_set, c->current.array_index);
     consume(TOKEN_CH_RPAREN, "Expect `)` after push expression.", &c->parser);
 }
 static void pop_array_val(Compiler *c)
@@ -1719,11 +1705,9 @@ static void sort_array(Compiler *c)
     if (c->count.scope_depth > 0)
         emit_byte(c, OP_SORT_LOCAL_ARRAY);
     else
-    {
         emit_bytes(c, OP_ZERO_E2, OP_SORT_GLOB_ARRAY);
-        emit_bytes(c, c->current.array_set, c->current.array_index);
-    }
     consume(TOKEN_CH_RPAREN, "Expect `)` after call to reverse.", &c->parser);
+    emit_bytes(c, c->current.array_set, c->current.array_index);
 }
 
 static void search_array(Compiler *c)
@@ -2122,7 +2106,6 @@ static void id(Compiler *c)
             consume(TOKEN_CH_RPAREN, "Expect `)` after method call.", &c->parser);
 
         emit_byte(c, OP_MOV_E4_E2);
-
         return;
     }
 
@@ -2405,6 +2388,19 @@ static Function *end_compile(Compiler *a)
     return f;
 }
 
+void mark_compiler_roots(Compiler *c)
+{
+    Compiler *compiler = NULL;
+    for (compiler = c; compiler; compiler = compiler->enclosing)
+    {
+        mark_obj(OBJ(compiler->func->name));
+        mark_obj(OBJ(compiler->func->ch.cases));
+        mark_obj(OBJ(compiler->func->ch.lines));
+        mark_obj(OBJ(compiler->func->ch.op_codes));
+        mark_obj(STK(compiler->func->ch.constants));
+    }
+}
+
 Function *compile(const char *src)
 {
     Compiler c;
@@ -2421,6 +2417,12 @@ Function *compile(const char *src)
     c.base->lookup.class = GROW_TABLE(NULL, TABLE_SIZE);
     c.base->lookup.include = GROW_TABLE(NULL, TABLE_SIZE);
     c.base->lookup.native = GROW_TABLE(NULL, TABLE_SIZE);
+
+    // mark_obj(c.base->func)
+    mark_obj(TABLE(c.base->lookup.call));
+    mark_obj(TABLE(c.base->lookup.class));
+    mark_obj(TABLE(c.base->lookup.include));
+    mark_obj(TABLE(c.base->lookup.native));
 
     c.base->hash.len = CString("len");
     c.base->hash.init = String("init");
@@ -2484,6 +2486,11 @@ Function *compile_path(const char *src, const char *path, const char *name)
     c.parser.panic = false;
     c.parser.err = false;
     c.parser.current_file = name;
+
+    mark_obj(TABLE(c.base->lookup.call));
+    mark_obj(TABLE(c.base->lookup.class));
+    mark_obj(TABLE(c.base->lookup.include));
+    mark_obj(TABLE(c.base->lookup.native));
 
     write_table(c.base->lookup.native, CString("clock"), OBJ(Int(c.base->count.native++)));
     write_table(c.base->lookup.native, CString("square"), OBJ(Int(c.base->count.native++)));

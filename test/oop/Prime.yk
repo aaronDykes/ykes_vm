@@ -22,7 +22,7 @@ class Prime
     res()
     {
         var start = clock();
-        this.print_prime(10000);
+        this.print_prime(1000);
         pout(clock() - start);
     }
 
