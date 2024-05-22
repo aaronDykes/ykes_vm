@@ -164,7 +164,8 @@ typedef enum
 
     OP_JMP_NIL,
     OP_JMP_NIL_LOCAL,
-    OP_JMP_NOT_NIL,
+    OP_JMP_GLOB_NOT_NIL,
+    OP_JMP_LOCAL_NOT_NIL,
     OP_JMPL,
     OP_JMPC,
     OP_JMPF,
@@ -203,6 +204,7 @@ typedef enum
     OP_ZERO_E2,
     OP_ZERO_EL_REGISTERS,
 
+    OP_CONDITIONAL_MOV_R1_E1,
     OP_MOV_E1_E2,
     OP_MOV_E1_E3,
     OP_MOV_E3_E1,

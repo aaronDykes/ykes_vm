@@ -229,8 +229,6 @@ int disassemble_instruction(Chunk *c, int offset)
         return jump_instruction("OP_JMP_NIL", 1, c, offset);
     case OP_JMP_NIL_LOCAL:
         return jump_instruction("OP_JMP_NIL_LOCAL", 1, c, offset);
-    case OP_JMP_NOT_NIL:
-        return jump_instruction("OP_JMP_NOT_NIL", 1, c, offset);
     case OP_JMPF:
         return jump_instruction("OP_JMPF", 1, c, offset);
     case OP_JMPT:
@@ -275,6 +273,8 @@ int disassemble_instruction(Chunk *c, int offset)
     case OP_ZERO_R5:
         return simple_instruction("OP_ZERO_R5", offset);
 
+    case OP_CONDITIONAL_MOV_R1_E1:
+        return byte_instruction("OP_CONDITIONAL_MOV_R1_E1", c, offset);
     case OP_MOV_PEEK_R1:
         return byte_instruction("OP_MOV_PEEK_R1", c, offset);
     case OP_MOV_PEEK_R2:
@@ -383,6 +383,11 @@ int disassemble_instruction(Chunk *c, int offset)
         return simple_instruction("OP_BIN_SEARCH_GLOB_ARRAY", offset);
     case OP_BIN_SEARCH_LOCAL_ARRAY:
         return simple_instruction("OP_BIN_SEARCH_LOCAL_ARRAY", offset);
+
+    case OP_JMP_GLOB_NOT_NIL:
+        return simple_instruction("OP_JMP_GLOB_NOT_NIL", offset);
+    case OP_JMP_LOCAL_NOT_NIL:
+        return simple_instruction("OP_JMP_LOCAL_NOT_NIL", offset);
 
     default:
         printf("Unkown opcode: %d\n", offset);

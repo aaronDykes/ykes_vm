@@ -1,15 +1,13 @@
 
-
-sr maf()
-{
-
     var ar = ["str", "cstr", "waiting"];
 
 
     ar.push("aa");
 
-    pout(ar);
+    var b;
 
-}
+    var a = ar ?? b;
 
-maf();
+    pout(a);
+
+

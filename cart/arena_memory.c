@@ -493,12 +493,11 @@ void collect_garbage(void)
     trace_references();
     sweep();
 
-#ifndef DEBUG_STRESS_GC
+    // #ifndef DEBUG_STRESS_GC
     machine.next_gc = machine.bytes_allocated * INC;
-#endif
+    // #endif
 
 #ifdef DEBUG_LOG_GC
-
     printf("-- gc end\n");
 #endif
 }

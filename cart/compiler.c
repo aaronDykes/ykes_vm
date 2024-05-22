@@ -533,7 +533,11 @@ static void var_dec(Compiler *c)
         emit_bytes(c, set, glob);
     }
     else
-        emit_byte(c, OP_NULL);
+    {
+        emit_bytes(c, set, glob);
+    }
+    // else
+    // emit_byte(c, OP_NULL);
 
     consume(TOKEN_CH_SEMI, "Expect ';' after variable declaration.", &c->parser);
 }
@@ -869,9 +873,16 @@ static void ternary_statement(Compiler *c)
 }
 static void null_coalescing_statement(Compiler *c)
 {
-    int exit = emit_jump(c, OP_JMP_NOT_NIL);
-    emit_byte(c, OP_POP);
+    int exit = emit_jump(c, c->count.scope_depth > 0
+                                ? OP_JMP_LOCAL_NOT_NIL
+                                : OP_JMP_GLOB_NOT_NIL);
+
+    if (c->count.scope_depth > 0 || CALL_PARAM(c->flags))
+        emit_byte(c, OP_POP);
+
     expression(c);
+    // if (c->count.scope_depth > 0 || CALL_PARAM(c->flags))
+    // emit_bytes(c, c->current.array_set, c->current.array_index);
     patch_jump(c, exit);
 }
 
@@ -1777,6 +1788,8 @@ static void dot(Compiler *c)
     }
     if (ar.as.hash == c->base->hash.push.as.hash)
     {
+
+        emit_byte(c, OP_CONDITIONAL_MOV_R1_E1);
         emit_bytes(c, OP_MOV_E1_E3, OP_ZERO_E1);
         push_array_val(c);
 

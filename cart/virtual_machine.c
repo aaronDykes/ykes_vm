@@ -763,7 +763,7 @@ Interpretation run(void)
 
             if (res.type != NULL_OBJ)
             {
-                machine.e1 = res;
+                machine.e2 = res;
                 break;
             }
             return INTERPRET_RUNTIME_ERR;
@@ -971,7 +971,17 @@ Interpretation run(void)
             break;
         }
 
-        case OP_JMP_NOT_NIL:
+        case OP_JMP_GLOB_NOT_NIL:
+        {
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+            uint16_t offset = READ_BYTE();
+            if (not_null(machine.e1))
+                frame->ip += offset;
+
+            break;
+        }
+        case OP_JMP_LOCAL_NOT_NIL:
         {
             uint16_t offset = READ_BYTE();
             if (not_null(PEEK()))
@@ -979,7 +989,6 @@ Interpretation run(void)
 
             break;
         }
-        break;
         case OP_JMP:
             frame->ip += READ_BYTE();
             break;
@@ -1149,6 +1158,10 @@ Interpretation run(void)
             print_line(POP());
             break;
 
+        case OP_CONDITIONAL_MOV_R1_E1:
+            if (machine.e1.type == NULL_OBJ)
+                machine.e1 = OBJ(machine.r1);
+            break;
         case OP_MOV_PEEK_R1:
             machine.r1 = PEEK().arena;
             break;
@@ -1331,8 +1344,8 @@ Interpretation run(void)
                 return INTERPRET_SUCCESS;
             }
 
-            for (Stack *s = machine.stack; s < machine.stack->top; s++)
-                POP();
+            // for (Stack *s = machine.stack; s < machine.stack->top; s++)
+            //     POP();
 
             machine.stack->top = frame->slots;
 
