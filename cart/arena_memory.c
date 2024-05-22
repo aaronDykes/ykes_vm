@@ -493,7 +493,12 @@ void collect_garbage(void)
     trace_references();
     sweep();
 
+#ifndef DEBUG_STRESS_GC
+    machine.next_gc = machine.bytes_allocated * INC;
+#endif
+
 #ifdef DEBUG_LOG_GC
+
     printf("-- gc end\n");
 #endif
 }
@@ -569,7 +574,6 @@ void append_obj(Free *alloced)
 
     Free *ptr = NULL;
 
-    alloced->mark = false;
     ptr = alloced;
 
     if (!machine.gc_work_list)
@@ -595,6 +599,7 @@ void *alloc_ptr(size_t size)
     Free *prev = NULL;
     Free *free = NULL;
     Free *alloced = NULL;
+
     machine.bytes_allocated += size;
 
     for (free = mem->next; free && free->size < size; free = free->next)
@@ -606,6 +611,7 @@ void *alloc_ptr(size_t size)
         size_t tmp = free->size - size;
         alloced = free + tmp;
         alloced->size = size - OFFSET;
+        alloced->mark = false;
 
         append_obj(alloced);
         alloced += 1;
@@ -635,6 +641,11 @@ void *alloc_ptr(size_t size)
 
         alloced = prev->next + prev->next->size;
         alloced->size = size - OFFSET;
+        alloced->mark = false;
+
+#ifdef DEBUG_LOG_GC
+        printf("ALLOCED: %p, SIZE: %zu\n", (void *)alloced, size);
+#endif
 
         append_obj(alloced);
         alloced += 1;
