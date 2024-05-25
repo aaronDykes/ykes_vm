@@ -23,7 +23,7 @@ sr print_prime(n)
 sr res()
 {
     var start = clock();
-    print_prime(100000);
+    print_prime(1000000);
     pout(clock() - start);
 
 }

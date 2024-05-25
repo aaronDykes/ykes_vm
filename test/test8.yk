@@ -1,13 +1,17 @@
 
-    var ar = ["str", "cstr", "waiting"];
+// sr nc()
+// {
 
 
-    ar.push("aa");
+     var b;
 
-    var b;
-
-    var a = ar ?? b;
-
-    pout(a);
+     var a = (b == null) 
+          ? "hello" : "another";
 
 
+     pout(a);
+
+
+// }
+
+// nc();

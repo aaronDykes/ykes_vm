@@ -534,6 +534,9 @@ static void var_dec(Compiler *c)
     }
     else
     {
+
+        if (c->count.scope_depth > 0)
+            emit_byte(c, OP_PUSH_NULL_OBJ);
         emit_bytes(c, set, glob);
     }
     // else
@@ -862,27 +865,38 @@ static void elif_statement(Compiler *c)
 static void ternary_statement(Compiler *c)
 {
     int exit = emit_jump(c, OP_JMPF);
-    emit_byte(c, OP_POP);
+    c->flags &= _FLAG_FIRST_EXPR_RST;
+    if (c->count.scope_depth > 0)
+        emit_byte(c, OP_POP);
+
+    emit_byte(c, OP_ZERO_R5);
     expression(c);
     consume(TOKEN_CH_COLON, "Expect `:` between ternary expressions.", &c->parser);
+
     int tr = emit_jump(c, OP_JMP);
+
     patch_jump(c, exit);
-    emit_byte(c, OP_POP);
+    if (c->count.scope_depth > 0)
+        emit_byte(c, OP_POP);
+    c->flags &= _FLAG_FIRST_EXPR_RST;
+    emit_byte(c, OP_ZERO_R5);
     expression(c);
     patch_jump(c, tr);
 }
 static void null_coalescing_statement(Compiler *c)
 {
+    emit_byte(c, OP_ZERO_E1);
     int exit = emit_jump(c, c->count.scope_depth > 0
                                 ? OP_JMP_LOCAL_NOT_NIL
                                 : OP_JMP_GLOB_NOT_NIL);
+    c->flags &= _FLAG_FIRST_EXPR_RST;
 
     if (c->count.scope_depth > 0 || CALL_PARAM(c->flags))
         emit_byte(c, OP_POP);
 
     expression(c);
     // if (c->count.scope_depth > 0 || CALL_PARAM(c->flags))
-    // emit_bytes(c, c->current.array_set, c->current.array_index);
+    emit_bytes(c, c->current.array_set, c->current.array_index);
     patch_jump(c, exit);
 }
 
@@ -1249,8 +1263,8 @@ static void emit_return(Compiler *c)
 {
     if (c->meta.type == INIT)
         emit_bytes(c, OP_GET_LOCAL, 0);
-    else
-        emit_byte(c, OP_NULL);
+    // else
+    // emit_byte(c, OP_NULL);
     emit_byte(c, OP_RETURN);
 }
 static void emit_byte(Compiler *c, int byte)
@@ -2074,10 +2088,14 @@ static void _access(Compiler *c)
         else if (match(TOKEN_CH_NULL_COALESCING, &c->parser))
             null_coalescing_statement(c);
 
-        emit_byte(c, (c->count.scope_depth > 0) ? OP_SET_LOCAL_ACCESS : OP_SET_GLOB_ACCESS);
+        emit_byte(c, (c->count.scope_depth > 0)
+                         ? OP_SET_LOCAL_ACCESS
+                         : OP_SET_GLOB_ACCESS);
     }
     else
-        emit_byte(c, (c->count.scope_depth > 0) ? OP_GET_LOCAL_ACCESS : OP_GET_GLOB_ACCESS);
+        emit_byte(c, (c->count.scope_depth > 0)
+                         ? OP_GET_LOCAL_ACCESS
+                         : OP_GET_GLOB_ACCESS);
 }
 
 static void id(Compiler *c)
@@ -2406,11 +2424,17 @@ void mark_compiler_roots(Compiler *c)
     Compiler *compiler = NULL;
     for (compiler = c; compiler; compiler = compiler->enclosing)
     {
-        mark_obj(OBJ(compiler->func->name));
-        mark_obj(OBJ(compiler->func->ch.cases));
-        mark_obj(OBJ(compiler->func->ch.lines));
-        mark_obj(OBJ(compiler->func->ch.op_codes));
-        mark_obj(STK(compiler->func->ch.constants));
+        Element name = OBJ(compiler->func->name);
+        Element cases = OBJ(compiler->func->ch.cases);
+        Element lines = OBJ(compiler->func->ch.lines);
+        Element op_codes = OBJ(compiler->func->ch.op_codes);
+        Element constants = STK(compiler->func->ch.constants);
+
+        mark_obj(&name);
+        mark_obj(&cases);
+        mark_obj(&lines);
+        mark_obj(&op_codes);
+        mark_obj(&constants);
     }
 }
 
@@ -2432,10 +2456,15 @@ Function *compile(const char *src)
     c.base->lookup.native = GROW_TABLE(NULL, TABLE_SIZE);
 
     // mark_obj(c.base->func)
-    mark_obj(TABLE(c.base->lookup.call));
-    mark_obj(TABLE(c.base->lookup.class));
-    mark_obj(TABLE(c.base->lookup.include));
-    mark_obj(TABLE(c.base->lookup.native));
+
+    Element call = TABLE(c.base->lookup.call);
+    Element class = TABLE(c.base->lookup.class);
+    Element incl = TABLE(c.base->lookup.include);
+    Element nati = TABLE(c.base->lookup.native);
+    mark_obj(&call);
+    mark_obj(&class);
+    mark_obj(&incl);
+    mark_obj(&nati);
 
     c.base->hash.len = CString("len");
     c.base->hash.init = String("init");
@@ -2500,10 +2529,15 @@ Function *compile_path(const char *src, const char *path, const char *name)
     c.parser.err = false;
     c.parser.current_file = name;
 
-    mark_obj(TABLE(c.base->lookup.call));
-    mark_obj(TABLE(c.base->lookup.class));
-    mark_obj(TABLE(c.base->lookup.include));
-    mark_obj(TABLE(c.base->lookup.native));
+    Element call = TABLE(c.base->lookup.call);
+    Element class = TABLE(c.base->lookup.class);
+    Element incl = TABLE(c.base->lookup.include);
+    Element nati = TABLE(c.base->lookup.native);
+
+    mark_obj(&call);
+    mark_obj(&class);
+    mark_obj(&incl);
+    mark_obj(&nati);
 
     write_table(c.base->lookup.native, CString("clock"), OBJ(Int(c.base->count.native++)));
     write_table(c.base->lookup.native, CString("square"), OBJ(Int(c.base->count.native++)));

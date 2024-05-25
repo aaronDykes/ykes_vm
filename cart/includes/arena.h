@@ -243,6 +243,7 @@ typedef enum
     // OP_CALL_LOCAL,
 
     OP_NULL,
+    OP_PUSH_NULL_OBJ,
 
     OP_RETURN
 
@@ -333,7 +334,6 @@ struct Arena
 {
     size_t size;
     T type;
-    bool mark;
 
     union
     {
@@ -358,7 +358,6 @@ struct Chunk
 
 struct Function
 {
-    bool mark;
     int arity;
     int upvalue_count;
     Arena name;
@@ -367,7 +366,6 @@ struct Function
 
 struct Closure
 {
-    bool mark;
     Function *func;
     Upval **upvals;
     int upval_count;
@@ -375,7 +373,6 @@ struct Closure
 
 struct Native
 {
-    bool mark;
     int arity;
     Arena obj;
     NativeFn fn;
@@ -403,7 +400,6 @@ struct Element
 
 struct Class
 {
-    bool mark;
     Closure *init;
     Arena name;
     Table *closures;
@@ -411,14 +407,12 @@ struct Class
 
 struct Instance
 {
-    bool mark;
     Class *classc;
     Table *fields;
 };
 
 struct Stack
 {
-    bool mark;
     int count;
     int len;
     size_t size;
@@ -428,7 +422,6 @@ struct Stack
 
 struct Upval
 {
-    bool mark;
     int len;
     int count;
     size_t size;
@@ -439,7 +432,6 @@ struct Upval
 
 struct Table
 {
-    bool mark;
     int count;
     int len;
 

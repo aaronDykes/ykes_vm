@@ -28,6 +28,9 @@
 #define PTR(ptr) \
     (((Free *)ptr) - 1)
 
+#define DP(ptr) \
+    (((Free **)ptr) - 1)
+
 #define FREE(ptr) \
     free_ptr(ptr)
 
@@ -127,8 +130,8 @@ void arena_free_arena(Arena *ar);
 
 bool _null(Element el);
 
-void mark_obj(Element el);
-void mark_value(Element el);
+void mark_obj(Element *el);
+void mark_value(Element *el);
 void mark_table(Table **t);
 void collect_garbage(void);
 void free_garbage(void);

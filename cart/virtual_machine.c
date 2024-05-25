@@ -29,11 +29,11 @@ void initVM(void)
     machine.argc = 0;
     machine.cargc = 0;
 
-    machine.r1 = Int(0);
-    machine.r2 = Int(0);
-    machine.r3 = Int(0);
-    machine.r4 = Int(0);
-    machine.r5 = Int(0);
+    machine.r1 = Null();
+    machine.r2 = Null();
+    machine.r3 = Null();
+    machine.r4 = Null();
+    machine.r5 = Null();
 
     machine.e1 = null_obj();
     machine.e2 = null_obj();
@@ -841,6 +841,9 @@ Interpretation run(void)
             break;
         case OP_NULL:
             break;
+        case OP_PUSH_NULL_OBJ:
+            PUSH(OBJ(Null()));
+            break;
         case OP_JMPF:
             frame->ip += (READ_BYTE() * FALSEY());
             break;
@@ -984,7 +987,7 @@ Interpretation run(void)
         case OP_JMP_LOCAL_NOT_NIL:
         {
             uint16_t offset = READ_BYTE();
-            if (not_null(PEEK()))
+            if (not_null(POP()))
                 frame->ip += offset;
 
             break;
