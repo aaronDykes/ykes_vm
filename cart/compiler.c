@@ -400,6 +400,7 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
         emit_byte(c, tmp->stack.upvalue[i].islocal ? 1 : 0);
         emit_byte(c, (uint8_t)tmp->stack.upvalue[i].index);
     }
+
     mark_compiler_roots(c);
 }
 
@@ -479,7 +480,6 @@ static void func_body(Compiler *c, ObjType type, Arena ar)
         emit_byte(c, tmp->stack.upvalue[i].islocal ? 1 : 0);
         emit_byte(c, (uint8_t)tmp->stack.upvalue[i].index);
     }
-
     mark_compiler_roots(c);
 }
 
@@ -572,7 +572,6 @@ static void synchronize(Parser *parser)
 static void statement(Compiler *c)
 {
 
-    // c->flags &= _FLAG_FIRST_EXPR_RST;
     if (match(TOKEN_PRINT, &c->parser))
         print_statement(c);
     else if (match(TOKEN_OP_REM, &c->parser))
@@ -1473,6 +1472,11 @@ static void array_alloc(Compiler *c)
         emit_bytes(c, OP_MOV_CNT_R1, arg);
         if (c->count.scope_depth > 0 || (CALL_PARAM(c->flags)))
             emit_byte(c, OP_STR_R1);
+    }
+    else if (match(TOKEN_THIS, &c->parser))
+    {
+        _this(c);
+        emit_byte(c, OP_CPY_ARRAY);
     }
     else if (match(TOKEN_ID, &c->parser))
     {

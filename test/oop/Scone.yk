@@ -1,11 +1,28 @@
 class Scone
 {
     
-    topping(first, second, third)
+
+    init(first, second, third)
     {
-        var str = third + " scones with " + first + "and " + second;
-        pout(str);
-        rm(str);
+        this.first = first;
+        this.second = second;
+        this.third = third;
+    }
+    first()
+    {
+        return this.first;
+    }
+    second()
+    {
+        return this.second;
+    }
+    third()
+    {
+        return this.third;
+    }
+    topping()
+    {
+        pout(this.first() + " scones with " + this.second() + "and " + this.third());
     }
 }
 

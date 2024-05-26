@@ -1,29 +1,29 @@
 class Nest
 {
-  init(a, b, c)
-  {
-    this.a = a;
-    this.b = b;
-    this.c = c;
-  }
+    init(a, b, c)
+    {
+        this.a = a;
+        this.b = b;
+        this.c = c;
+    }
 
-  geta()
-  {
-    return this.a;
-  }
-  getb()
-  {
-    return this.b;
-  }
-  getc()
-  {
-    return this.c;
-  }
-  sum()
-  {
-    var z = this.geta() + this.getb() + (this.getc() * 10);
-    return z;
-  }
+    geta()
+    {
+        return this.a;
+    }
+    getb()
+    {
+        return this.b;
+    }
+    getc()
+    {
+        return this.c;
+    }
+    sum()
+    {
+        var z = this.geta() + this.getb() + (this.getc() * 10);
+        return z;
+    }
   
 }
 

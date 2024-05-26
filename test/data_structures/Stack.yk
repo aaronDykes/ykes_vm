@@ -7,8 +7,9 @@ class Stacky
     init()
     {
         this.s = Stack();
-        this.size_ar = Array(["vector", "of", "vectors"]);
-        this.cp_ar = Array(["This is", " a", " vector of vectors"]);
+        this.size_ar = ["vector", "of", "vectors"];
+        // this.cp_ar = Array(["This is", " a", " vector of vectors"]);
+        this.cp_ar = Array(this.size_ar);
         this.str = "This is a Cstr";
         this.vec = Vector();
         this.t = Table();
@@ -31,11 +32,8 @@ class Stacky
 
 
         each (var i : this.t["Stacky"])
-        {
-
             for (var j = 0; j < i.len; j++)
                 pout(i[j]);
-        }
 
     }
 

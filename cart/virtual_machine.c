@@ -1021,8 +1021,6 @@ Interpretation run(void)
             uint16_t index = READ_BYTE();
 
             Element el = (frame->slots + index)->as;
-            // if (!_null(el))
-            // free_asterisk(el);
 
             frame->slots[index].as = PEEK();
 
@@ -1033,8 +1031,6 @@ Interpretation run(void)
         {
 
             uint16_t index = READ_BYTE();
-            // if (!_null((frame->slots + index)->as))
-            // free_asterisk((frame->slots + index)->as);
 
             frame->slots[index].as = (machine.cargc < machine.argc)
                                          ? (frame->slots + machine.cargc++)->as

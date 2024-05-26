@@ -4,6 +4,7 @@ import "data_structures/*";
 
 
 var p = Prime();
+var nprime = NP();
 var s = Stacky();
 var tab = TAB();
 var fib = FIB();
@@ -11,17 +12,18 @@ var n = Nest(69, 10, 420);
 var fiz = Fizzbang();
 
 var c = CoffeeMaker("eggs for dinner");
+var sco = Scone("Coffee", "strawberries ", "cream");
 
-p.res();
-fib.res();
+// sco.topping();
 
-s.res();
-tab.res();
-c.brew();
+// p.res();
+nprime.res();
+// fiz.fb();
 
+// fib.res();
 
-pout(n.sum());
+// c.brew();
 
+// s.res();
 
-
-fiz.fb();
+// tab.res();

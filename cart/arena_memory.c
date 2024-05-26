@@ -53,6 +53,14 @@ void initialize_global_memory(void)
     machine.gc_work_list_head = NULL;
 }
 
+static void reinitialize_free_list(void)
+{
+    mem = request_system_memory(OFFSET * PAGE);
+    mem->next = NULL;
+    mem->mark = false;
+    mem->size = PAGE - OFFSET;
+}
+
 void destroy_global_memory(void)
 {
 
@@ -419,10 +427,7 @@ static void mark_closure(Closure **c)
         mark_value(&s->as);
 
     for (Upval **p = (*c)->upvals; p; p++)
-    {
         mark_obj(&(*p)->closed.as);
-        // p->mark = true;
-    }
 }
 
 static void mark_vector(Arena **vec)
@@ -492,11 +497,11 @@ static void mark_roots(void)
 
     mark_stack(&machine.stack);
 
-    for (int i = 0; i < machine.frame_count; i++)
-    {
-        Element el = CLOSURE(machine.frames[i].closure);
-        mark_obj(&el);
-    }
+    // for (int i = 0; i < machine.frame_count; i++)
+    // {
+    //     Element el = CLOSURE(machine.frames[i].closure);
+    //     mark_obj(&el);
+    // }
 
     mark_table(&machine.glob);
 }
@@ -546,10 +551,10 @@ void sweep(void)
         {
             Free *garbage = free;
 
-            // if (prev)
-            prev->next = free->next;
-            // else
-            // machine.gc_work_list->next = free->next;
+            if (free == machine.gc_work_list)
+                machine.gc_work_list = free->next;
+            else
+                prev = free->next;
 
             FREE(garbage);
         }
@@ -571,13 +576,6 @@ void free_ptr(Free *new)
 #endif
 
     Free *free = NULL, *prev = NULL;
-
-    if (new < mem)
-    {
-        new->next = mem;
-        mem = new;
-        return;
-    }
 
     for (free = mem; free->next && (((unsigned long)free < (unsigned long)new)); free = free->next)
         prev = free->next;
@@ -651,13 +649,9 @@ void *alloc_ptr(size_t size)
 
         free->size = tmp;
 
-        if (!mem->next && tmp == 0)
+        if (mem->size == 0)
         {
-            mem = request_system_memory(PAGE * OFFSET);
-            mem->size = PAGE - OFFSET;
-            mem->next = NULL;
-            mem->mark = false;
-
+            reinitialize_free_list();
             return (void *)alloced;
         }
 
@@ -1255,9 +1249,9 @@ Stack *realloc_stack(Stack *st, size_t size)
 
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
-#else
-        if (machine.bytes_allocated > machine.next_gc)
-            collect_garbage();
+// #else
+//         // if (machine.bytes_allocated > machine.next_gc)
+//         //     collect_garbage();
 #endif
     }
     else
