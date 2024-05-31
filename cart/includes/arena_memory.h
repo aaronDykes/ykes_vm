@@ -84,8 +84,6 @@
     closure(c)
 #define CLASS(c) \
     new_class(c)
-#define BOUND(c) \
-    bound_closure_el(c)
 #define INSTANCE(c) \
     new_instance(c)
 #define TABLE(t) \
@@ -130,9 +128,11 @@ void arena_free_arena(Arena *ar);
 
 bool _null(Element el);
 
-void mark_obj(Element *el);
-void mark_value(Element *el);
+void mark_obj(Element el);
+void mark_value(Element el);
 void mark_table(Table **t);
+bool is_obj(Element el);
+bool _null(Element el);
 void collect_garbage(void);
 void free_garbage(void);
 

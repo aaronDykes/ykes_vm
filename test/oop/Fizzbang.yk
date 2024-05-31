@@ -2,7 +2,7 @@
 class Fizzbang
 {
 
-    fb()
+    res()
     {
         var str;
         for (var i = 1; i < 100; i++)

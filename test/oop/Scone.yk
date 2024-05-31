@@ -20,7 +20,7 @@ class Scone
     {
         return this.third;
     }
-    topping()
+    res()
     {
         pout(this.first() + " scones with " + this.second() + "and " + this.third());
     }

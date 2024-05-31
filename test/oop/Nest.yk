@@ -24,6 +24,10 @@ class Nest
         var z = this.geta() + this.getb() + (this.getc() * 10);
         return z;
     }
+    res()
+    {
+        pout(this.sum());
+    }
   
 }
 

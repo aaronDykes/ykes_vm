@@ -366,6 +366,8 @@ Table *arena_realloc_table(Table *t, size_t size)
     if (!t && size != 0)
     {
         ptr = arena_alloc_table(size);
+
+        PTR(ptr)->mark = true;
         return ptr;
     }
     if (size == 0)
@@ -376,6 +378,9 @@ Table *arena_realloc_table(Table *t, size_t size)
         return NULL;
     }
     size_t new_size = 0;
+    ptr = arena_alloc_table(size);
+
+    PTR(ptr)->mark = true;
 
     if (size > (t - 1)->size)
     {
@@ -390,8 +395,6 @@ Table *arena_realloc_table(Table *t, size_t size)
     }
     else
         new_size = size;
-
-    ptr = arena_alloc_table(size);
 
     for (size_t i = 0; i < new_size; i++)
     {

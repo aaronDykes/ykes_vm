@@ -13,20 +13,24 @@
 
 static void *request_system_memory(size_t size)
 {
-
-    return mmap(
+    void *ptr = NULL;
+    ptr = mmap(
         NULL,
         size,
         PROT_READ | PROT_WRITE,
-
         POSIX_MADV_RANDOM |
             POSIX_MADV_NORMAL |
             POSIX_MADV_WILLNEED |
             MAP_PRIVATE |
-#if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)
-            MAP_ANON,
-#endif
+            MAP_ANONYMOUS,
         -1, 0);
+
+    if (!ptr)
+    {
+        perror("Failed to allocate system memory");
+        exit(1);
+    }
+    return ptr;
 }
 void initialize_global_memory(void)
 {
@@ -35,17 +39,19 @@ void initialize_global_memory(void)
     machine.gc_work_list = NULL;
 
     mem = request_system_memory(OFFSET * PAGE);
+
     mem->size = PAGE - OFFSET;
     mem->next = NULL;
     mem->mark = false;
     // mem->next->size = PAGE;
     // mem->next->next = NULL;
 
-    size_t size = (sizeof(Stack) * MACHINE_STACK) + sizeof(Stack);
+    size_t size = (sizeof(Stack) * TABLE_SIZE) + sizeof(Stack);
 
     machine.gray_stack = malloc(size);
     machine.gray_stack->count = 0;
     machine.gray_stack->top = machine.gray_stack;
+    machine.gray_stack->count = 0;
     machine.gray_stack->len = MACHINE_STACK;
     machine.gray_stack->size = size;
 
@@ -261,9 +267,10 @@ bool _null(Element el)
     default:
         return true;
     }
+    return true;
 }
 
-static bool is_obj(Element el)
+bool is_obj(Element el)
 {
     switch (el.type)
     {
@@ -301,79 +308,77 @@ static bool is_obj(Element el)
     }
 }
 
-void mark_obj(Element *el)
+void mark_obj(Element el)
 {
-    if (_null(*el))
+    if (_null(el))
         return;
 
     Free **ptr = NULL;
-    switch (el->type)
+
+    switch (el.type)
     {
     case ARENA:
-        switch (el->arena.type)
+        switch (el.arena.type)
         {
         case ARENA_BYTES:
-        {
-
-            ptr = (Free **)&el->arena.listof.Bytes;
+            ptr = (Free **)&el.arena.listof.Bytes;
             break;
-        }
         case ARENA_SHORTS:
-            ptr = (Free **)&el->arena.listof.Shorts;
+            ptr = (Free **)&el.arena.listof.Shorts;
             break;
         case ARENA_INTS:
-            ptr = (Free **)&el->arena.listof.Ints;
+            ptr = (Free **)&el.arena.listof.Ints;
             break;
         case ARENA_DOUBLES:
-            ptr = (Free **)&el->arena.listof.Doubles;
+            ptr = (Free **)&el.arena.listof.Doubles;
             break;
         case ARENA_LONGS:
-            ptr = (Free **)&el->arena.listof.Longs;
+            ptr = (Free **)&el.arena.listof.Longs;
             break;
         case ARENA_STRS:
-            ptr = (Free **)&el->arena.listof.Strings;
+            ptr = (Free **)&el.arena.listof.Strings;
             break;
         case ARENA_FUNC:
         case ARENA_NATIVE:
         case ARENA_VAR:
         case ARENA_STR:
-            ptr = (Free **)&el->arena.as.String;
+            ptr = (Free **)&el.arena.as.String;
             break;
         default:
             return;
         }
-        break;
+        return;
     case TABLE:
-        // if (PTR(el->table - 1)->mark)
-        //     return;
-        {
-
-            Table *t = el->table - 1;
-            ptr = (Free **)&t;
-            break;
-        }
+    {
+        Table *t = el.table - 1;
+        ptr = (Free **)&t;
+    }
+    break;
     case NATIVE:
-        ptr = (Free **)&(el->native);
-        break;
+        ptr = (Free **)&(el.native);
+        return;
     case CLASS:
-        ptr = (Free **)&(el->classc);
+        ptr = (Free **)&(el.classc);
+        break;
+    case FUNCTION:
+        ptr = (Free **)&(el.function);
         break;
     case INSTANCE:
-        ptr = (Free **)&(el->instance);
+        ptr = (Free **)&(el.instance);
         break;
     case CLOSURE:
     case METHOD:
-        ptr = (Free **)&(el->closure);
+        ptr = (Free **)&(el.closure);
         break;
     case VECTOR:
     {
-        Arena *ar = el->arena_vector - 1;
+        Arena *ar = el.arena_vector - 1;
         ptr = (Free **)&ar;
         break;
     }
     case STACK:
     {
-        Stack *s = el->stack - 1;
+        Stack *s = el.stack - 1;
         ptr = (Free **)&s;
         break;
     }
@@ -385,13 +390,14 @@ void mark_obj(Element *el)
         return;
     (*ptr)->mark = true;
 
-    if (el->type == ARENA || el->type == NATIVE)
+    if (el.type == CLOSURE || el.type == CLASS)
         return;
 
     if (machine.gray_stack->count + 1 > machine.gray_stack->len)
     {
         machine.gray_stack->len = GROW_CAPACITY(machine.gray_stack->len);
         machine.gray_stack = realloc(machine.gray_stack, machine.gray_stack->len);
+        machine.gray_stack->top = machine.gray_stack;
     }
 
     if (!machine.gray_stack)
@@ -400,75 +406,72 @@ void mark_obj(Element *el)
         exit(1);
     }
 
-    (machine.gray_stack->top++)->as = *el;
     machine.gray_stack->count++;
+    (machine.gray_stack->top++)->as = el;
 }
 
-void mark_value(Element *el)
+void mark_value(Element el)
 {
-    if (is_obj(*el))
+    if (is_obj(el))
         mark_obj(el);
+}
+
+static void mark_stack(Stack **s)
+{
+
+    // PTR((*s) - 1)->mark = true;
+
+    mark_obj(STK(*s));
+    Stack *p = NULL;
+    for (p = *s; p < p->top; p++)
+        mark_value(p->as);
+
+    p = NULL;
 }
 
 static void mark_closure(Closure **c)
 {
 
-    Element name = OBJ((*c)->func->name);
-    Element cases = OBJ((*c)->func->ch.cases);
-    Element lines = OBJ((*c)->func->ch.lines);
-    Element op_codes = OBJ((*c)->func->ch.op_codes);
+    mark_obj(CLOSURE(*c));
+    mark_obj(OBJ((*c)->func->name));
+    mark_obj(OBJ((*c)->func->ch.cases));
+    mark_obj(OBJ((*c)->func->ch.lines));
+    mark_obj(OBJ((*c)->func->ch.op_codes));
+    mark_obj(FUNC((*c)->func));
 
-    mark_obj(&name);
-    mark_obj(&cases);
-    mark_obj(&lines);
-    mark_obj(&op_codes);
-
-    for (Stack *s = (*c)->func->ch.constants; s < s->top; s++)
-        mark_value(&s->as);
+    mark_stack(&(*c)->func->ch.constants);
 
     for (Upval **p = (*c)->upvals; p; p++)
-        mark_obj(&(*p)->closed.as);
+        mark_obj((*p)->closed.as);
 }
 
 static void mark_vector(Arena **vec)
 {
 
     int len = (*vec - 1)->count;
+
     for (int i = 0; i < len; i++)
-    {
-        Element el = OBJ((*vec)[i]);
-        mark_value(&el);
-    }
+        mark_value(OBJ((*vec)[i]));
 }
 
-static void mark_stack(Stack **s)
+static void blacken_object(Element *el)
 {
+    if (_null(*el))
+        return;
 
-    for (Stack *p = *s; p < p->top; p++)
-        mark_value(&p->as);
-}
-
-static void blacken_object(Element el)
-{
-    switch (el.type)
+    switch (el->type)
     {
     case TABLE:
-        mark_table(&el.table);
-        break;
-    case CLASS:
-        mark_table(&el.classc->closures);
+        mark_table(&el->table);
         break;
     case INSTANCE:
-        mark_table(&el.instance->fields);
-        break;
-    case CLOSURE:
-        mark_closure(&el.closure);
+        mark_table(&el->instance->fields);
         break;
     case VECTOR:
-        mark_vector(&el.arena_vector);
+        mark_vector(&el->arena_vector);
         break;
     case STACK:
-        mark_stack(&el.stack);
+        mark_stack(&el->stack);
         break;
 
     default:
@@ -479,30 +482,65 @@ static void blacken_object(Element el)
 void mark_table(Table **t)
 {
 
+    if (!((*t) - 1))
+        return;
     size_t size = ((*t) - 1)->len;
 
     Table *tab = *t;
+
+    // PTR((*t) - 1)->mark = true;
+
+    mark_obj(TABLE(*t));
+
     for (size_t i = 0; i < size; i++)
-    {
         if (tab[i].key.type != ARENA_NULL)
         {
-            Element el = OBJ(tab[i].key);
-            mark_obj(&el);
-            mark_value(&tab[i].val);
+
+            mark_obj(OBJ(tab[i].key));
+            mark_value(tab[i].val);
         }
-    }
+}
+
+static void mark_class(Class *c)
+{
+    mark_obj(CLASS(c));
+    mark_obj(OBJ(c->name));
+
+    if (c->init)
+        mark_closure(&c->init);
+
+    // mark_table(&c->closures);
 }
 static void mark_roots(void)
 {
 
     mark_stack(&machine.stack);
 
-    // for (int i = 0; i < machine.frame_count; i++)
-    // {
-    //     Element el = CLOSURE(machine.frames[i].closure);
-    //     mark_obj(&el);
-    // }
+    Stack *p = NULL;
+    // PTR(machine.call_stack - 1)->mark = true;
 
+    mark_obj(STK(machine.call_stack));
+    for (p = machine.call_stack; p && p < p->top; p++)
+        mark_closure(&p->as.closure);
+
+    p = NULL;
+
+    mark_obj(STK(machine.class_stack));
+    for (p = machine.class_stack; p && p < p->top; p++)
+        mark_class(p->as.classc);
+
+    p = NULL;
+    mark_obj(STK(machine.native_calls));
+    for (p = machine.native_calls; p && p < p->top; p++)
+        mark_obj(NATIVE(p->as.native));
+
+    for (int i = 0; i < machine.frame_count; i++)
+    {
+        Element el = CLOSURE(machine.frames[i].closure);
+        mark_closure(&el.closure);
+    }
+
+    p = NULL;
     mark_table(&machine.glob);
 }
 
@@ -510,7 +548,10 @@ static void trace_references(void)
 {
 
     while (machine.gray_stack->count > 0)
-        blacken_object(machine.gray_stack[--machine.gray_stack->count].as);
+    {
+        Element el = machine.gray_stack[--machine.gray_stack->count].as;
+        blacken_object(&el);
+    }
 
     machine.gray_stack->top = machine.gray_stack;
 }
@@ -525,9 +566,10 @@ void collect_garbage(void)
     trace_references();
     sweep();
 
-#ifndef DEBUG_STRESS_GC
     machine.next_gc = machine.bytes_allocated * INC;
-#endif
+
+    machine.gc_work_list = NULL;
+    machine.gc_work_list_head = NULL;
 
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
@@ -547,7 +589,7 @@ void sweep(void)
     {
         prev = free;
 
-        if (!free->mark)
+        if (!prev->mark)
         {
             Free *garbage = free;
 
@@ -559,7 +601,7 @@ void sweep(void)
             FREE(garbage);
         }
         else
-            free->mark = false;
+            prev->mark = false;
     }
 }
 
@@ -572,7 +614,7 @@ void free_ptr(Free *new)
         return;
 
 #ifdef DEBUG_LOG_GC
-    printf("FREE: %p, SIZE: %zu\n", (void *)new, new->size);
+    printf("FREE: %p\n", (void *)new);
 #endif
 
     Free *free = NULL, *prev = NULL;
@@ -633,6 +675,11 @@ void *alloc_ptr(size_t size)
 
     machine.bytes_allocated += size;
 
+#ifndef DEBUG_STRESS_GC
+    if (machine.bytes_allocated > machine.next_gc)
+        collect_garbage();
+#endif
+
     for (free = mem; free && free->size < size; free = free->next)
         prev = free;
 
@@ -645,14 +692,13 @@ void *alloc_ptr(size_t size)
         alloced->mark = false;
 
         append_obj(alloced);
-        alloced += 1;
 
         free->size = tmp;
 
         if (mem->size == 0)
         {
             reinitialize_free_list();
-            return (void *)alloced;
+            return (void *)++alloced;
         }
 
         if (prev && tmp == 0)
@@ -664,7 +710,7 @@ void *alloc_ptr(size_t size)
         printf("ALLOCED: %p, SIZE: %zu\n", (void *)alloced, size);
 #endif
 
-        return (void *)alloced;
+        return (void *)++alloced;
     }
 
     if (prev)
@@ -685,9 +731,8 @@ void *alloc_ptr(size_t size)
 #endif
 
         append_obj(alloced);
-        alloced += 1;
 
-        return (void *)alloced;
+        return (void *)++alloced;
     }
 
     return NULL;
@@ -712,12 +757,12 @@ Arena *arena_realloc_arena(Arena *ar, size_t size)
     size_t new_size = 0;
 
     if (!ar && size != 0)
-    {
-        ptr = arena_alloc_arena(size);
-        return ptr;
-    }
+        return arena_alloc_arena(size);
+
     if (size == 0)
     {
+        if (!ar)
+            return NULL;
         machine.bytes_allocated -= (ar - 1)->size;
         arena_free_arena(ar);
         --ar;
@@ -726,6 +771,7 @@ Arena *arena_realloc_arena(Arena *ar, size_t size)
     }
 
     ptr = arena_alloc_arena(size);
+
     machine.bytes_allocated -= (ar - 1)->size;
 
     if (size > (ar - 1)->size)
@@ -734,9 +780,6 @@ Arena *arena_realloc_arena(Arena *ar, size_t size)
 
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
-#else
-        if (machine.bytes_allocated > machine.next_gc)
-            collect_garbage();
 #endif
     }
     else
@@ -806,7 +849,10 @@ Arena arena_realloc(Arena *ar, size_t size, T type)
 
     if (size == 0)
     {
+        if (ar->type == ARENA_NULL)
+            return Null();
         machine.bytes_allocated -= ar->size;
+
         ARENA_FREE(ar);
         return Null();
     }
@@ -825,9 +871,6 @@ Arena arena_realloc(Arena *ar, size_t size, T type)
         new_size = ar->size;
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
-#else
-        if (machine.bytes_allocated > machine.next_gc)
-            collect_garbage();
 #endif
     }
     else
@@ -1228,6 +1271,8 @@ Stack *realloc_stack(Stack *st, size_t size)
 
     if (size == 0)
     {
+        if (!st)
+            return NULL;
         machine.bytes_allocated -= (st - 1)->size;
         FREE_STACK(&st);
         --st;
@@ -1249,9 +1294,7 @@ Stack *realloc_stack(Stack *st, size_t size)
 
 #ifdef DEBUG_STRESS_GC
         collect_garbage();
-// #else
-//         // if (machine.bytes_allocated > machine.next_gc)
-//         //     collect_garbage();
+
 #endif
     }
     else
@@ -1262,8 +1305,8 @@ Stack *realloc_stack(Stack *st, size_t size)
 
     s->count = st->count;
     s->top = s;
-    s->top += s->count;
-    FREE(PTR((st - 1)));
+    s->top += st->count;
+    // FREE(PTR((st - 1)));
     --st;
     st = NULL;
     return s;
@@ -1513,7 +1556,7 @@ void free_closure(Closure **closure)
     machine.bytes_allocated -= sizeof(Closure);
 
     FREE_UPVALS((*closure)->upvals);
-    FREE(PTR(closure));
+    FREE(PTR(*closure));
     (*closure) = NULL;
     closure = NULL;
 }

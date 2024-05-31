@@ -1,5 +1,10 @@
 class Prime
 {
+    init(n)
+    {
+        this.n = n;
+    }
+
     is_prime(l)
     {
         if (l == 9)
@@ -22,7 +27,7 @@ class Prime
     res()
     {
         var start = clock();
-        this.print_prime(1000000);
+        this.print_prime(this.n);
         pout(clock() - start);
     }
 

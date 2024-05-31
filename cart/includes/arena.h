@@ -86,6 +86,7 @@ typedef enum
     OP_GET_CLOSURE,
     OP_GET_METHOD,
     OP_GET_CLASS,
+
     OP_GET_INSTANCE,
     OP_GET_NATIVE,
 

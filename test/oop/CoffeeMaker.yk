@@ -8,7 +8,7 @@ class CoffeeMaker
         this.coffee += ". It very nice brew";
     }
 
-    brew() 
+    res() 
     {
         var str = "Enjoy your " + this.coffee; 
         pout(str);

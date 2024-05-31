@@ -26,7 +26,7 @@ sr vec()
 
 
 
-    ar.pop();
+    // ar.pop();
 
 
     each (var i : ar)

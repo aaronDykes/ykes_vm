@@ -1,29 +1,53 @@
 import "oop/*";
-import "data_structures/*";
+// import "oop/Prime.yk";
+// import "oop/Scone.yk";
+// import "oop/Nest.yk";
+// import "oop/CoffeeMaker.yk";
+
+// import "oop/NPrime.yk";
 
 
 
-var p = Prime();
-var nprime = NP();
-var s = Stacky();
-var tab = TAB();
-var fib = FIB();
-var n = Nest(69, 10, 420);
-var fiz = Fizzbang();
 
-var c = CoffeeMaker("eggs for dinner");
-var sco = Scone("Coffee", "strawberries ", "cream");
 
-// sco.topping();
 
-// p.res();
-nprime.res();
-// fiz.fb();
+sr another()
+{
 
-// fib.res();
 
-// c.brew();
+    var nprime = NP();
+    var f = FIB();
 
-// s.res();
+    var p = Prime(100);
+    nprime.res();
+    p.res();
+    f.res();
+    var sco = Scone("Coffee", "strawberries ", "cream");
+    var n = Nest(69, 10, 420);
+    var c = CoffeeMaker("eggs for dinner");
 
-// tab.res();
+    // p.res();
+
+    sco.res();
+    n.res();
+
+
+    c.res();
+}
+
+another();
+
+
+// var ast = Asterisk(n, c, sco);
+
+
+// ast.i1.res();
+// ast.i2.res();
+// ast.i3.res();
+
+
+
+
+
+
+

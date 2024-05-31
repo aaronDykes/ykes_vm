@@ -15,6 +15,7 @@ void initVM(void)
     machine.call_stack = NULL;
     machine.class_stack = NULL;
     machine.native_calls = NULL;
+    // machine.reg_stack = NULL;
     machine.glob = NULL;
 
     machine.bytes_allocated = 0;
@@ -24,6 +25,7 @@ void initVM(void)
     machine.call_stack = GROW_STACK(NULL, STACK_SIZE);
     machine.class_stack = GROW_STACK(NULL, STACK_SIZE);
     machine.native_calls = GROW_STACK(NULL, STACK_SIZE);
+    // machine.reg_stack = GROW_STACK(NULL, STACK_SIZE);
     machine.glob = GROW_TABLE(NULL, TABLE_SIZE);
 
     machine.argc = 0;
@@ -281,8 +283,7 @@ Interpretation interpret(const char *src)
     Closure *clos = new_closure(func);
     call(clos, 0);
 
-    push(&machine.stack, closure(clos));
-
+    push(&machine.stack, CLOSURE(clos));
     close_upvalues(machine.stack->top - 1);
     Interpretation res = run();
     return res;
@@ -318,7 +319,7 @@ static bool call_value(Element el, uint8_t argc)
     case NATIVE:
     {
         Element res = el.native->fn(argc, machine.stack->top - argc);
-        machine.stack->count -= (argc + 1);
+        (machine.stack - 1)->count -= (argc + 1);
         machine.stack->top -= (argc + 1);
 
         if (res.type == ARENA)
@@ -476,11 +477,11 @@ Interpretation run(void)
     CallFrame *frame = &machine.frames[machine.frame_count - 1];
 
 #define READ_BYTE() (*frame->ip++)
-#define READ_CONSTANT() ((frame->closure->func->ch.constants + READ_BYTE())->as)
+#define READ_CONSTANT() \
+    ((frame->closure->func->ch.constants + READ_BYTE())->as)
 
 #define PEEK() ((machine.stack->top - 1)->as)
 #define NPEEK(N) ((machine.stack->top + (-1 - N))->as)
-#define CPEEK(N) ((machine.call_stack->top + (-1 + -N))->as)
 #define FALSEY() (!machine.r5.as.Bool)
 #define POPN(n) (popn(&machine.stack, n))
 #define LOCAL() ((frame->slots + READ_BYTE())->as)
@@ -489,21 +490,18 @@ Interpretation run(void)
 #define CPUSH(ar) (push(&machine.call_stack, ar))
 #define PPUSH(ar) (push(&machine.class_stack, ar))
 #define FIND_GLOB(ar) (find(machine.glob, ar))
-#define FIND_PARAM(ar) (find(frame->closure->func->params, ar))
 #define WRITE_GLOB(a, b) (write_table(machine.glob, a, b))
-#define WRITE_PARAM(a, b) (write_table(frame->closure->func->params, a, b))
 #define RM(ad) \
     free_asterisk(ad)
 #define POP() \
-    (--machine.stack->count, (--machine.stack->top)->as)
-#define CPOP() \
-    (--machine.call_stack->count, (--machine.call_stack->top)->as)
+    (--machine.stack->count, pop(&machine.stack))
 
     for (;;)
     {
 #ifdef DEBUG_TRACE_EXECUTION
         for (Stack *v = machine.stack; v < machine.stack->top; v++)
             print_line(v->as);
+        printf("Current stack size: %d\n", machine.stack->len);
         disassemble_instruction(&frame->closure->func->ch,
                                 (int)(frame->ip - frame->closure->func->ch.op_codes.listof.Shorts));
 #endif
@@ -535,8 +533,8 @@ Interpretation run(void)
                     (READ_BYTE())
                         ? capture_upvalue(frame->slots + READ_BYTE())
                         : frame->closure->upvals[READ_BYTE()];
+            break;
         }
-        break;
 
         case OP_GET_UPVALUE:
             PUSH((*frame->closure->upvals + READ_BYTE())->closed.as);
@@ -893,16 +891,14 @@ Interpretation run(void)
             Element n = find_entry(&machine.e4.instance->fields, &name);
 
             if (n.type != ARENA)
-
-                machine.e1 = n,
-                machine.e2 = n;
+                machine.e1 = n, machine.e2 = n;
 
             PUSH(n);
 
             if (n.type != NULL_OBJ)
                 break;
 
-            runtime_error("ERROR: Undefined property '%s'.", name.as.String);
+            runtime_error("ERROR: Undefined field '%s'.", name.as.String);
             return INTERPRET_RUNTIME_ERR;
         }
         case OP_GET_METHOD:
@@ -927,7 +923,7 @@ Interpretation run(void)
             if (n.type != NULL_OBJ)
                 break;
 
-            runtime_error("ERROR: Undefined property '%s'.", name.as.String);
+            runtime_error("ERROR: Undefined method '%s'.", name.as.String);
             return INTERPRET_RUNTIME_ERR;
         }
         break;
@@ -1007,6 +1003,7 @@ Interpretation run(void)
             Element el = LOCAL();
 
             PUSH(el);
+
             if (el.type == INSTANCE)
                 machine.e4 = el;
             else if (el.type != ARENA)
@@ -1016,14 +1013,18 @@ Interpretation run(void)
         }
 
         case OP_SET_LOCAL:
+
         {
 
-            uint16_t index = READ_BYTE();
+            // uint16_t index = READ_BYTE();
+            // Element el = (frame->slots + index)->as;
 
-            Element el = (frame->slots + index)->as;
+            // if (!_null(el))
+            //     RM(el);
 
-            frame->slots[index].as = PEEK();
+            // (frame->slots + index)->as = PEEK();
 
+            LOCAL() = PEEK();
             break;
         }
 
@@ -1050,11 +1051,9 @@ Interpretation run(void)
             PPUSH(READ_CONSTANT());
             break;
         case OP_GET_CLASS:
-
             machine.e4 = INSTANCE(instance((machine.class_stack + READ_BYTE())->as.classc));
             machine.e4.instance->fields = GROW_TABLE(NULL, NATIVE_STACK_SIZE);
             break;
-
         case OP_RM:
             if (machine.e1.type == NULL_OBJ)
                 machine.e1 = OBJ(machine.r1);
@@ -1093,12 +1092,16 @@ Interpretation run(void)
             Arena var = READ_CONSTANT().arena;
             Element el = FIND_GLOB(var);
 
+            uint16_t call_param = READ_BYTE();
+
             if (el.type == NULL_OBJ)
             {
                 runtime_error("ERROR: Undefined global value '%s'.", var.as.String);
                 return INTERPRET_RUNTIME_ERR;
             }
 
+            if (call_param)
+                PUSH(el);
             if (el.type == ARENA)
             {
                 machine.r2 = machine.r1;
@@ -1109,9 +1112,6 @@ Interpretation run(void)
 
             else
                 machine.e1 = el;
-
-            if (READ_BYTE())
-                PUSH(el);
 
             break;
         }
@@ -1299,11 +1299,6 @@ Interpretation run(void)
         case OP_ZERO_E2:
             machine.e2 = null_obj();
             break;
-        case OP_ZERO_EL_REGISTERS:
-            machine.e1 = null_obj();
-            // machine.e2 = null_obj();
-            break;
-
         case OP_STR_R1:
             PUSH(OBJ(machine.r1));
             break;
@@ -1319,7 +1314,6 @@ Interpretation run(void)
         case OP_STR_R5:
             PUSH(OBJ(machine.r5));
             break;
-
         case OP_STR_E1:
             PUSH(machine.e1);
             break;
@@ -1343,8 +1337,11 @@ Interpretation run(void)
                 return INTERPRET_SUCCESS;
             }
 
-            // for (Stack *s = machine.stack; s < machine.stack->top; s++)
-            //     POP();
+            for (Stack *s = machine.stack; s < machine.stack->top; s++)
+                POP();
+
+            // (machine.reg_stack - 1)->count = 0;
+            // machine.reg_stack->top = machine.reg_stack;
 
             machine.stack->top = frame->slots;
 
@@ -1373,12 +1370,9 @@ Interpretation run(void)
     }
 
 #undef RM
-#undef CPOP
 #undef POP
 #undef WRITE_GLOB
-#undef WRITE_PARAM
 #undef FIND_GLOB
-#undef FIND_PARAM
 #undef PPUSH
 #undef CPUSH
 #undef PUSH
@@ -1390,6 +1384,5 @@ Interpretation run(void)
 #undef NPEEK
 #undef PEEK
 #undef READ_CONSTANT
-// #undefREAD_BYTE
 #undef READ_BYTE
 }

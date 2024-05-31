@@ -43,6 +43,15 @@ void check_stack_size(Stack *s)
     }
 }
 
+Element pop(Stack **s)
+{
+    Stack *tmp = *s;
+
+    --tmp->count;
+    // --(*s)->count;
+    return (--tmp->top)->as;
+}
+
 void popn(Stack **s, int ival)
 {
     for (int i = 0; i < ival; i++)
@@ -61,6 +70,6 @@ void push(Stack **s, Element e)
         reset_stack(*s);
     }
 
-    (st->top++)->as = e;
     st->count++;
+    (st->top++)->as = e;
 }

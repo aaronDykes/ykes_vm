@@ -318,14 +318,15 @@ static void class_declaration(Compiler *c)
 
     Arena ar = parse_id(c);
     Class *classc = NULL;
+
     classc = class(ar);
     classc->closures = GROW_TABLE(NULL, STACK_SIZE);
 
     ClassCompiler *class = NULL;
     class = ALLOC(sizeof(ClassCompiler));
 
-    write_table(c->base->lookup.class, classc->name, OBJ(Int(c->base->count.class ++)));
-    c->base->stack.instance[c->base->count.class - 1] = classc;
+    write_table(c->base->lookup.class, classc->name, OBJ(Int(c->base->count.class)));
+    c->base->stack.instance[c->base->count.class ++] = classc;
     class->instance_name = ar;
 
     class->enclosing = c->classc;
@@ -392,22 +393,21 @@ static void method_body(Compiler *c, ObjType type, Arena ar, Class **class)
     c = c->enclosing;
 
     emit_bytes(
-        c, OP_CLOSURE,
+        c, OP_METHOD,
         add_constant(&c->func->ch, CLOSURE(clos)));
 
     for (int i = 0; i < tmp->count.upvalue; i++)
     {
         emit_byte(c, tmp->stack.upvalue[i].islocal ? 1 : 0);
-        emit_byte(c, (uint8_t)tmp->stack.upvalue[i].index);
+        emit_byte(c, tmp->stack.upvalue[i].index);
     }
 
     mark_compiler_roots(c);
 }
 
-static void call(Compiler *c)
+static void _call(Compiler *c)
 {
     uint8_t argc = argument_list(c);
-
     emit_bytes(c, (c->count.scope_depth > 0) ? OP_CALL_LOCAL : OP_CALL, argc);
 }
 
@@ -417,6 +417,7 @@ static int argument_list(Compiler *c)
 
     if (match(TOKEN_CH_RPAREN, &c->parser))
         return 0;
+
     c->flags |= _FLAG_CALL_PARAM_SET;
     do
     {
@@ -478,7 +479,7 @@ static void func_body(Compiler *c, ObjType type, Arena ar)
     for (int i = 0; i < tmp->count.upvalue; i++)
     {
         emit_byte(c, tmp->stack.upvalue[i].islocal ? 1 : 0);
-        emit_byte(c, (uint8_t)tmp->stack.upvalue[i].index);
+        emit_byte(c, tmp->stack.upvalue[i].index);
     }
     mark_compiler_roots(c);
 }
@@ -539,8 +540,6 @@ static void var_dec(Compiler *c)
             emit_byte(c, OP_PUSH_NULL_OBJ);
         emit_bytes(c, set, glob);
     }
-    // else
-    // emit_byte(c, OP_NULL);
 
     consume(TOKEN_CH_SEMI, "Expect ';' after variable declaration.", &c->parser);
 }
@@ -1085,7 +1084,7 @@ static void parse_precedence(Precedence prec, Compiler *c)
     }
 }
 
-static void _and(Compiler *c)
+static void _and_(Compiler *c)
 {
     int end = emit_jump(c, OP_JMPF);
 
@@ -1094,7 +1093,7 @@ static void _and(Compiler *c)
 
     patch_jump(c, end);
 }
-static void _or(Compiler *c)
+static void _or_(Compiler *c)
 {
     int else_jmp = emit_jump(c, OP_JMPT);
 
@@ -1584,7 +1583,7 @@ static void parse_native_var_arg(Compiler *c)
     if (c->count.scope_depth > 0)
         emit_byte(c, OP_STR_E2);
     consume(TOKEN_CH_LPAREN, "Expect `(` prior to function call", &c->parser);
-    call(c);
+    _call(c);
 }
 
 static Arena parse_func_id(Compiler *c)
@@ -1762,8 +1761,12 @@ static void _this(Compiler *c)
         return;
     }
 
+    // c->flags |= _FLAG_INSTANCE_SET;
+
     if (match(TOKEN_CH_DOT, &c->parser))
         dot(c);
+
+    // c->flags &= _FLAG_INSTANCE_RST;
 }
 
 static void dot(Compiler *c)
@@ -2117,7 +2120,7 @@ static void id(Compiler *c)
     {
         emit_bytes(c, OP_GET_CLOSURE, arg);
 
-        if (c->count.scope_depth > 0)
+        if (c->count.scope_depth > 0 || CALL_PARAM(c->flags))
             emit_byte(c, OP_STR_E2);
         return;
     }
@@ -2126,6 +2129,7 @@ static void id(Compiler *c)
     {
 
         emit_bytes(c, OP_GET_CLASS, arg);
+
         consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
 
         if (c->base->stack.instance[arg]->init)
@@ -2133,14 +2137,18 @@ static void id(Compiler *c)
             Closure *clos = c->base->stack.instance[arg]->init;
             int cst = add_constant(&c->func->ch, CLOSURE(clos));
             emit_bytes(c, OP_MOV_CNT_E2, cst);
-            if (c->count.scope_depth > 0)
+            if (c->count.scope_depth > 0 || CALL_PARAM(c->flags))
                 emit_byte(c, OP_STR_E2);
-            call(c);
+            _call(c);
         }
         else
             consume(TOKEN_CH_RPAREN, "Expect `)` after method call.", &c->parser);
 
         emit_byte(c, OP_MOV_E4_E2);
+
+        if (c->count.scope_depth > 0 || CALL_PARAM(c->flags))
+            emit_byte(c, OP_STR_E4);
+
         return;
     }
 
@@ -2287,7 +2295,6 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, arg);
         if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || (CALL_PARAM(c->flags))))
-
             emit_byte(c, 1);
         else if (get == OP_GET_GLOBAL)
             emit_byte(c, 0);
@@ -2428,17 +2435,12 @@ void mark_compiler_roots(Compiler *c)
     Compiler *compiler = NULL;
     for (compiler = c; compiler; compiler = compiler->enclosing)
     {
-        Element name = OBJ(compiler->func->name);
-        Element cases = OBJ(compiler->func->ch.cases);
-        Element lines = OBJ(compiler->func->ch.lines);
-        Element op_codes = OBJ(compiler->func->ch.op_codes);
-        Element constants = STK(compiler->func->ch.constants);
-
-        mark_obj(&name);
-        mark_obj(&cases);
-        mark_obj(&lines);
-        mark_obj(&op_codes);
-        mark_obj(&constants);
+        mark_obj(OBJ(compiler->func->name));
+        mark_obj(OBJ(compiler->func->ch.cases));
+        mark_obj(OBJ(compiler->func->ch.lines));
+        mark_obj(OBJ(compiler->func->ch.op_codes));
+        mark_obj(STK(compiler->func->ch.constants));
+        mark_obj(FUNC(compiler->func));
     }
 }
 
@@ -2461,14 +2463,10 @@ Function *compile(const char *src)
 
     // mark_obj(c.base->func)
 
-    Element call = TABLE(c.base->lookup.call);
-    Element class = TABLE(c.base->lookup.class);
-    Element incl = TABLE(c.base->lookup.include);
-    Element nati = TABLE(c.base->lookup.native);
-    mark_obj(&call);
-    mark_obj(&class);
-    mark_obj(&incl);
-    mark_obj(&nati);
+    mark_obj(TABLE(c.base->lookup.call));
+    mark_obj(TABLE(c.base->lookup.class));
+    mark_obj(TABLE(c.base->lookup.include));
+    mark_obj(TABLE(c.base->lookup.native));
 
     c.base->hash.len = CString("len");
     c.base->hash.init = String("init");
@@ -2533,15 +2531,10 @@ Function *compile_path(const char *src, const char *path, const char *name)
     c.parser.err = false;
     c.parser.current_file = name;
 
-    Element call = TABLE(c.base->lookup.call);
-    Element class = TABLE(c.base->lookup.class);
-    Element incl = TABLE(c.base->lookup.include);
-    Element nati = TABLE(c.base->lookup.native);
-
-    mark_obj(&call);
-    mark_obj(&class);
-    mark_obj(&incl);
-    mark_obj(&nati);
+    mark_obj(TABLE(c.base->lookup.call));
+    mark_obj(TABLE(c.base->lookup.class));
+    mark_obj(TABLE(c.base->lookup.include));
+    mark_obj(TABLE(c.base->lookup.native));
 
     write_table(c.base->lookup.native, CString("clock"), OBJ(Int(c.base->count.native++)));
     write_table(c.base->lookup.native, CString("square"), OBJ(Int(c.base->count.native++)));

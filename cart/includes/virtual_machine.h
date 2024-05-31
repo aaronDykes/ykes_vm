@@ -5,6 +5,12 @@
 #include "arena_table.h"
 #include <limits.h>
 
+#define _FLAG_INSTANCE_CALL_SET 0x01 /* 0001 */
+#define _FLAG_INSTANCE_CALL_RST 0x0E /* 1110 */
+
+#define INSTANCE_CALL(flag) \
+    (flag & _FLAG_INSTANCE_CALL_SET)
+
 typedef enum
 {
     INTERPRET_SUCCESS,
@@ -26,6 +32,7 @@ struct vm
     int frame_count;
     int argc;
     int cargc;
+    uint8_t flags;
 
     size_t bytes_allocated;
     size_t next_gc;
@@ -46,7 +53,9 @@ struct vm
     CallFrame frames[FRAMES_MAX];
     Stack *stack;
 
+    // Stack *reg_stack;
     Stack *gray_stack;
+
     Free *gc_work_list;
     Free *gc_work_list_head;
 

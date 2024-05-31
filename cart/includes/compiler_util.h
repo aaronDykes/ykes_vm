@@ -6,11 +6,11 @@
 #define CALL_COUNT 255
 #define CWD_MAX 1024
 
-#define _FLAG_CALL_PARAM_SET 0x01
-#define _FLAG_CALL_PARAM_RST 0x0E
+#define _FLAG_CALL_PARAM_SET 0x01 /* 0001 */
+#define _FLAG_CALL_PARAM_RST 0x0E /* 1110 */
 
-#define _FLAG_FIRST_EXPR_SET 0x02
-#define _FLAG_FIRST_EXPR_RST 0x0D
+#define _FLAG_FIRST_EXPR_SET 0x02 /* 0010*/
+#define _FLAG_FIRST_EXPR_RST 0x0D /* 1101*/
 
 struct Parser
 {
@@ -152,7 +152,7 @@ static void consume(int t, const char *str, Parser *parser);
 static void advance_compiler(Parser *parser);
 
 static void declaration(Compiler *c);
-static void call(Compiler *c);
+static void _call(Compiler *c);
 
 static int argument_list(Compiler *c);
 
@@ -216,8 +216,8 @@ static void grouping(Compiler *c);
 static PRule *get_rule(int t);
 static void parse_precedence(Precedence precedence, Compiler *c);
 
-static void _and(Compiler *c);
-static void _or(Compiler *c);
+static void _and_(Compiler *c);
+static void _or_(Compiler *c);
 
 static void binary(Compiler *c);
 static void unary(Compiler *c);
@@ -274,7 +274,7 @@ static void declare_var(Compiler *c, Arena ar);
 static void add_local(Compiler *c, Arena *ar);
 
 static PRule rules[] = {
-    [TOKEN_CH_LPAREN] = {grouping, call, PREC_CALL},
+    [TOKEN_CH_LPAREN] = {grouping, _call, PREC_CALL},
     [TOKEN_CH_RPAREN] = {NULL, NULL, PREC_NONE},
 
     [TOKEN_CH_LCURL] = {NULL, NULL, PREC_NONE},
@@ -316,8 +316,8 @@ static PRule rules[] = {
     [TOKEN_OP_LT] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_OP_LE] = {NULL, binary, PREC_COMPARISON},
 
-    [TOKEN_SC_AND] = {NULL, _and, PREC_AND},
-    [TOKEN_SC_OR] = {NULL, _or, PREC_OR},
+    [TOKEN_SC_AND] = {NULL, _and_, PREC_AND},
+    [TOKEN_SC_OR] = {NULL, _or_, PREC_OR},
 
     [TOKEN_OP_AND] = {NULL, binary, PREC_AND},
     [TOKEN_OP_OR] = {NULL, binary, PREC_OR},
