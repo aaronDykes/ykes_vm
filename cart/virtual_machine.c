@@ -15,17 +15,17 @@ void initVM(void)
     machine.call_stack = NULL;
     machine.class_stack = NULL;
     machine.native_calls = NULL;
-    // machine.reg_stack = NULL;
     machine.glob = NULL;
 
+    machine.collect = false;
+
     machine.bytes_allocated = 0;
-    machine.next_gc = 1024 * 1024;
+    machine.next_gc = 900 * 900;
 
     machine.stack = GROW_STACK(NULL, STACK_SIZE);
     machine.call_stack = GROW_STACK(NULL, STACK_SIZE);
     machine.class_stack = GROW_STACK(NULL, STACK_SIZE);
     machine.native_calls = GROW_STACK(NULL, STACK_SIZE);
-    // machine.reg_stack = GROW_STACK(NULL, STACK_SIZE);
     machine.glob = GROW_TABLE(NULL, TABLE_SIZE);
 
     machine.argc = 0;
@@ -41,6 +41,7 @@ void initVM(void)
     machine.e2 = null_obj();
     machine.e3 = null_obj();
     machine.e4 = null_obj();
+    machine.e5 = null_obj();
 
     define_native(native_name("clock"), clock_native);
     define_native(native_name("square"), square_native);
@@ -297,11 +298,17 @@ Interpretation interpret_path(const char *src, const char *path, const char *nam
         return INTERPRET_RUNTIME_ERR;
 
     Closure *clos = new_closure(func);
+
+    PTR(clos)->mark = true;
     call(clos, 0);
 
     push(&machine.stack, closure(clos));
 
+    PTR(machine.stack)->mark = true;
+
     close_upvalues(machine.stack->top - 1);
+
+    machine.collect = true;
     Interpretation res = run();
     return res;
 }
@@ -471,6 +478,20 @@ static bool not_null(Element el)
     }
 }
 
+static Element pop_val(Stack *s)
+{
+
+    --s->count;
+    return (--s->top)->as;
+}
+
+static Element pop_machine(void)
+{
+    --machine.stack->count;
+    --machine.stack->count;
+    return (--machine.stack->top)->as;
+}
+
 Interpretation run(void)
 {
 
@@ -494,14 +515,13 @@ Interpretation run(void)
 #define RM(ad) \
     free_asterisk(ad)
 #define POP() \
-    (--machine.stack->count, pop(&machine.stack))
+    (--machine.stack->count, --machine.stack->count, (--machine.stack->top)->as)
 
     for (;;)
     {
 #ifdef DEBUG_TRACE_EXECUTION
         for (Stack *v = machine.stack; v < machine.stack->top; v++)
             print_line(v->as);
-        printf("Current stack size: %d\n", machine.stack->len);
         disassemble_instruction(&frame->closure->func->ch,
                                 (int)(frame->ip - frame->closure->func->ch.op_codes.listof.Shorts));
 #endif
@@ -796,7 +816,6 @@ Interpretation run(void)
 
             machine.e1 = _pop_array_val(&machine.e3);
             machine.e2 = machine.e3;
-            // machine.e3 = null_obj();
             break;
         }
 
@@ -867,6 +886,7 @@ Interpretation run(void)
         case OP_SET_PROP:
         {
             Element el = POP();
+
             if (machine.e4.type != INSTANCE)
             {
                 runtime_error("ERROR: Can only set properties of an instance.");
@@ -914,7 +934,6 @@ Interpretation run(void)
             Element n = find_entry(&machine.e4.instance->classc->closures, &name);
 
             if (n.type != ARENA)
-
                 machine.e1 = n,
                 machine.e2 = n;
 
@@ -1001,7 +1020,6 @@ Interpretation run(void)
         {
 
             Element el = LOCAL();
-
             PUSH(el);
 
             if (el.type == INSTANCE)
@@ -1013,20 +1031,8 @@ Interpretation run(void)
         }
 
         case OP_SET_LOCAL:
-
-        {
-
-            // uint16_t index = READ_BYTE();
-            // Element el = (frame->slots + index)->as;
-
-            // if (!_null(el))
-            //     RM(el);
-
-            // (frame->slots + index)->as = PEEK();
-
             LOCAL() = PEEK();
             break;
-        }
 
         case OP_SET_LOCAL_PARAM:
         {
@@ -1050,10 +1056,13 @@ Interpretation run(void)
         case OP_CLASS:
             PPUSH(READ_CONSTANT());
             break;
-        case OP_GET_CLASS:
-            machine.e4 = INSTANCE(instance((machine.class_stack + READ_BYTE())->as.classc));
-            machine.e4.instance->fields = GROW_TABLE(NULL, NATIVE_STACK_SIZE);
+        case OP_MOV_CLASS_R4:
+        {
+            Element el = INSTANCE(instance((machine.class_stack + READ_BYTE())->as.classc));
+            el.instance->fields = GROW_TABLE(NULL, NATIVE_STACK_SIZE);
+            machine.e4 = el;
             break;
+        }
         case OP_RM:
             if (machine.e1.type == NULL_OBJ)
                 machine.e1 = OBJ(machine.r1);
@@ -1109,7 +1118,6 @@ Interpretation run(void)
             }
             else if (el.type == INSTANCE)
                 machine.e4 = el;
-
             else
                 machine.e1 = el;
 
@@ -1269,6 +1277,12 @@ Interpretation run(void)
         case OP_MOV_E4_E2:
             machine.e2 = machine.e4;
             break;
+        case OP_MOV_E4_E5:
+            machine.e5 = machine.e4;
+            break;
+        case OP_MOV_E5_E2:
+            machine.e2 = machine.e5;
+            break;
 
         case OP_ZERO_ARENA_REGISTERS:
             machine.r1 = Null();
@@ -1299,6 +1313,12 @@ Interpretation run(void)
         case OP_ZERO_E2:
             machine.e2 = null_obj();
             break;
+        case OP_ZERO_E4:
+            machine.e4 = null_obj();
+            break;
+        case OP_ZERO_E5:
+            machine.e5 = null_obj();
+            break;
         case OP_STR_R1:
             PUSH(OBJ(machine.r1));
             break;
@@ -1326,6 +1346,9 @@ Interpretation run(void)
         case OP_STR_E4:
             PUSH(machine.e4);
             break;
+        case OP_STR_E5:
+            PUSH(machine.e5);
+            break;
         case OP_RETURN:
         {
             Element el = POP();
@@ -1340,27 +1363,18 @@ Interpretation run(void)
             for (Stack *s = machine.stack; s < machine.stack->top; s++)
                 POP();
 
-            // (machine.reg_stack - 1)->count = 0;
-            // machine.reg_stack->top = machine.reg_stack;
-
             machine.stack->top = frame->slots;
 
-            // machine.e1 = el;
-
-            // machine.r1 = el.arena;
             if (el.type == ARENA)
             {
                 if (el.arena.type == ARENA_BOOL)
                     machine.r5 = el.arena;
                 else
                     machine.r1 = el.arena;
-                // machine.e1 = OBJ(machine.r5);
             }
             else
                 machine.e1 = el;
 
-            // if (machine.e1.type == NULL_OBJ)
-            // machine.e1 = OBJ(machine.r5);
             PUSH(el);
 
             frame = &machine.frames[machine.frame_count - 1];

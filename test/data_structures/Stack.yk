@@ -8,7 +8,6 @@ class Stacky
     {
         this.s = Stack();
         this.size_ar = ["vector", "of", "vectors"];
-        // this.cp_ar = Array(["This is", " a", " vector of vectors"]);
         this.cp_ar = Array(this.size_ar);
         this.str = "This is a Cstr";
         this.vec = Vector();

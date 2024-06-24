@@ -1775,12 +1775,6 @@ static void dot(Compiler *c)
 
     Arena ar = parse_id(c);
 
-    // if (match(TOKEN_CH_LSQUARE, &c->parser))
-    // {
-    //     _access(c);
-    //     // return;
-    // }
-
     if (ar.as.hash == c->base->hash.bin_search.as.hash)
     {
         emit_byte(c, OP_MOV_E1_E3);
@@ -1828,6 +1822,7 @@ static void dot(Compiler *c)
 
     if (match(TOKEN_OP_ASSIGN, &c->parser))
     {
+
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2128,7 +2123,7 @@ static void id(Compiler *c)
     if ((arg = resolve_instance(c, ar)) != -1)
     {
 
-        emit_bytes(c, OP_GET_CLASS, arg);
+        emit_bytes(c, OP_MOV_CLASS_R4, arg);
 
         consume(TOKEN_CH_LPAREN, "Expect `(` prior to method call.", &c->parser);
 
@@ -2201,6 +2196,8 @@ static void id(Compiler *c)
         emit_bytes(c, get, arg);
         c->flags |= _FLAG_FIRST_EXPR_SET;
 
+        if (get == OP_GET_GLOBAL)
+            emit_byte(c, (c->count.scope_depth > 0 || CALL_PARAM(c->flags)) ? 1 : 0);
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -2216,6 +2213,10 @@ static void id(Compiler *c)
         emit_bytes(c, get, arg);
 
         c->flags |= _FLAG_FIRST_EXPR_SET;
+
+        if (get == OP_GET_GLOBAL)
+            emit_byte(c, (c->count.scope_depth > 0 || CALL_PARAM(c->flags)) ? 1 : 0);
+
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -2231,6 +2232,9 @@ static void id(Compiler *c)
         emit_bytes(c, get, arg);
         c->flags |= _FLAG_FIRST_EXPR_SET;
 
+        if (get == OP_GET_GLOBAL)
+            emit_byte(c, (c->count.scope_depth > 0 || CALL_PARAM(c->flags)) ? 1 : 0);
+
         expression(c);
 
         if (match(TOKEN_CH_TERNARY, &c->parser))
@@ -2244,6 +2248,10 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, arg);
         c->flags |= _FLAG_FIRST_EXPR_SET;
+
+        if (get == OP_GET_GLOBAL)
+            emit_byte(c, (c->count.scope_depth > 0 || CALL_PARAM(c->flags)) ? 1 : 0);
+
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2256,6 +2264,10 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, arg);
         c->flags |= _FLAG_FIRST_EXPR_SET;
+
+        if (get == OP_GET_GLOBAL)
+            emit_byte(c, (c->count.scope_depth > 0 || CALL_PARAM(c->flags)) ? 1 : 0);
+
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2269,6 +2281,10 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, arg);
         c->flags |= _FLAG_FIRST_EXPR_SET;
+
+        if (get == OP_GET_GLOBAL)
+            emit_byte(c, (c->count.scope_depth > 0 || CALL_PARAM(c->flags)) ? 1 : 0);
+
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2282,6 +2298,10 @@ static void id(Compiler *c)
     {
         emit_bytes(c, get, arg);
         c->flags |= _FLAG_FIRST_EXPR_SET;
+
+        if (get == OP_GET_GLOBAL)
+            emit_byte(c, (c->count.scope_depth > 0 || CALL_PARAM(c->flags)) ? 1 : 0);
+
         expression(c);
         if (match(TOKEN_CH_TERNARY, &c->parser))
             ternary_statement(c);
@@ -2294,10 +2314,14 @@ static void id(Compiler *c)
     else
     {
         emit_bytes(c, get, arg);
-        if (get == OP_GET_GLOBAL && (c->count.scope_depth > 0 || (CALL_PARAM(c->flags))))
-            emit_byte(c, 1);
-        else if (get == OP_GET_GLOBAL)
-            emit_byte(c, 0);
+
+        if (get == OP_GET_GLOBAL)
+        {
+            if (c->count.scope_depth > 0 || CALL_PARAM(c->flags))
+                emit_byte(c, (uint16_t)0x0001);
+            else
+                emit_byte(c, (uint16_t)0x0000);
+        }
 
         if (check(TOKEN_CH_DOT, &c->parser))
             c->current.array_set = set,
@@ -2525,7 +2549,7 @@ Function *compile_path(const char *src, const char *path, const char *name)
     c.base->hash.reverse = CString("reverse");
     c.base->hash.remove = CString("remove");
     c.base->hash.sort = CString("sort");
-    c.base->hash.bin_search = CString("bin_search");
+    c.base->hash.bin_search = CString("search");
 
     c.parser.panic = false;
     c.parser.err = false;

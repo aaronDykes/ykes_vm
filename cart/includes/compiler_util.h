@@ -12,6 +12,9 @@
 #define _FLAG_FIRST_EXPR_SET 0x02 /* 0010*/
 #define _FLAG_FIRST_EXPR_RST 0x0D /* 1101*/
 
+#define _FLAG_INSTANCE_CALL_SET 0x04 /* 0100 */
+#define _FLAG_INSTANCE_CALL_RST 0x0B /* 1011 */
+
 struct Parser
 {
     token cur;

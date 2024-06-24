@@ -1,53 +1,5 @@
-import "oop/*";
-// import "oop/Prime.yk";
-// import "oop/Scone.yk";
-// import "oop/Nest.yk";
-// import "oop/CoffeeMaker.yk";
 
-// import "oop/NPrime.yk";
-
-
-
-
-
-
-sr another()
+struct hello 
 {
 
-
-    var nprime = NP();
-    var f = FIB();
-
-    var p = Prime(100);
-    nprime.res();
-    p.res();
-    f.res();
-    var sco = Scone("Coffee", "strawberries ", "cream");
-    var n = Nest(69, 10, 420);
-    var c = CoffeeMaker("eggs for dinner");
-
-    // p.res();
-
-    sco.res();
-    n.res();
-
-
-    c.res();
 }
-
-another();
-
-
-// var ast = Asterisk(n, c, sco);
-
-
-// ast.i1.res();
-// ast.i2.res();
-// ast.i3.res();
-
-
-
-
-
-
-

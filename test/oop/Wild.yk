@@ -1,0 +1,19 @@
+
+
+class Wild
+{
+
+    init(i1)
+    {
+        this.i1 = i1;
+        this.i2 = i2;
+    }
+
+    res()
+    {
+        this.i1.res();
+        this.i2.res();
+    }
+
+}
+

@@ -1,0 +1,38 @@
+import "../oop/*";
+import "../data_structures/*";
+
+
+
+
+
+
+sr another()
+{
+
+
+    // var p = Prime(100000);
+
+    // p.res();
+    var stk = Stacky();
+    var sco = Scone("Coffee", "strawberries ", "cream");
+    var n = Nest(69, 10, 420);
+    var c = CoffeeMaker("eggs for dinner");
+    var fiz = Fizzbang(100);
+
+
+
+    fiz.res();
+    c.res();
+    sco.res();
+    stk.res();
+    n.res();
+}
+
+another();
+
+
+
+
+
+
+

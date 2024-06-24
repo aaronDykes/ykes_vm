@@ -41,7 +41,8 @@ struct vm
         e1,
         e2,
         e3,
-        e4; /* functions, instances and data structures */
+        e4,
+        e5; /* functions, instances and data structures */
 
     Arena
         r1,
@@ -59,6 +60,7 @@ struct vm
     Free *gc_work_list;
     Free *gc_work_list_head;
 
+    bool collect;
     Stack *call_stack;
     Stack *class_stack;
     Stack *native_calls;

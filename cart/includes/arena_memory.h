@@ -20,16 +20,8 @@
 #define MACHINE_STACK 256
 #define IP_SIZE 100
 #define MEM_OFFSET 1
-#define OFFSET sizeof(Free)
-
 #define ALLOC(size) \
     alloc_ptr(size + OFFSET)
-
-#define PTR(ptr) \
-    (((Free *)ptr) - 1)
-
-#define DP(ptr) \
-    (((Free **)ptr) - 1)
 
 #define FREE(ptr) \
     free_ptr(ptr)
@@ -118,6 +110,11 @@ union Free
 };
 
 static Free *mem;
+
+#define PTR(ptr) \
+    (((Free *)ptr) - 1)
+
+#define OFFSET sizeof(Free)
 
 void initialize_global_memory(void);
 void destroy_global_memory(void);

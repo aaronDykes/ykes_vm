@@ -1,3 +1,4 @@
+
 sr sort_search()
 {
 
@@ -11,7 +12,7 @@ sr sort_search()
     a.reverse();
     b.reverse();
     
-    pout(b, b.bin_search(5.121));
+    pout(b, b.search(5.121));
 }
 
 sort_search();

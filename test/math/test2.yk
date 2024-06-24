@@ -1,0 +1,26 @@
+
+
+
+sr maf()
+{
+    var s="This is a string!!!!string!!!";
+    s = strstr(s, "string!!", "vector");
+    s = strstr(s, "string!!", "vector");
+
+    s.reverse();
+
+    pout(s);
+    rm(s);
+
+}
+
+
+
+
+
+
+var a = "str";
+
+a = maf;
+
+a();

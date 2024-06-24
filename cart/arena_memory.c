@@ -38,7 +38,7 @@ void initialize_global_memory(void)
     mem = NULL;
     machine.gc_work_list = NULL;
 
-    mem = request_system_memory(OFFSET * PAGE);
+    mem = request_system_memory(PAGE);
 
     mem->size = PAGE - OFFSET;
     mem->next = NULL;
@@ -61,7 +61,8 @@ void initialize_global_memory(void)
 
 static void reinitialize_free_list(void)
 {
-    mem = request_system_memory(OFFSET * PAGE);
+    mem = NULL;
+    mem = request_system_memory(PAGE);
     mem->next = NULL;
     mem->mark = false;
     mem->size = PAGE - OFFSET;
@@ -70,18 +71,20 @@ static void reinitialize_free_list(void)
 void destroy_global_memory(void)
 {
 
-    // mem = mem;
-    // mem->size += OFFSET;
+    Free *tmp = NULL;
 
     while (mem)
     {
 
-        Free *tmp = mem->next;
+        tmp = mem->next;
         munmap(mem, mem->size);
         mem = tmp;
     }
+    mem = NULL;
+    tmp = NULL;
 
     free(machine.gray_stack);
+    machine.gray_stack = NULL;
 }
 
 Arena arena_init(void *data, size_t size, T type)
@@ -211,7 +214,7 @@ static void merge_list(void)
     {
 
         prev = free;
-        if (free->next && ((unsigned long)(free + 1 + free->size)) == (unsigned long)free->next)
+        if (free->next && ((char *)(free + 1) + free->size) == (char *)free->next)
         {
             prev->size += free->next->size;
             prev->next = free->next->next;
@@ -419,9 +422,9 @@ void mark_value(Element el)
 static void mark_stack(Stack **s)
 {
 
-    // PTR((*s) - 1)->mark = true;
+    PTR((*s) - 1)->mark = true;
 
-    mark_obj(STK(*s));
+    // mark_obj(STK(*s));
     Stack *p = NULL;
     for (p = *s; p < p->top; p++)
         mark_value(p->as);
@@ -432,12 +435,12 @@ static void mark_stack(Stack **s)
 static void mark_closure(Closure **c)
 {
 
-    mark_obj(CLOSURE(*c));
-    mark_obj(OBJ((*c)->func->name));
-    mark_obj(OBJ((*c)->func->ch.cases));
-    mark_obj(OBJ((*c)->func->ch.lines));
-    mark_obj(OBJ((*c)->func->ch.op_codes));
-    mark_obj(FUNC((*c)->func));
+    PTR(*c)->mark = true;
+    PTR((*c)->func->name.as.String)->mark = true;
+    PTR((*c)->func->ch.cases.listof.Ints)->mark = true;
+    PTR((*c)->func->ch.lines.listof.Ints)->mark = true;
+    PTR((*c)->func->ch.op_codes.listof.Shorts)->mark = true;
+    PTR((*c)->func)->mark = true;
 
     mark_stack(&(*c)->func->ch.constants);
 
@@ -484,27 +487,27 @@ void mark_table(Table **t)
 
     if (!((*t) - 1))
         return;
-    size_t size = ((*t) - 1)->len;
-
     Table *tab = *t;
 
-    // PTR((*t) - 1)->mark = true;
+    PTR((*t) - 1)->mark = true;
 
-    mark_obj(TABLE(*t));
+    if ((tab - 1)->count == 0)
+        return;
 
-    for (size_t i = 0; i < size; i++)
+    for (size_t i = 0; i < tab->size; i++)
         if (tab[i].key.type != ARENA_NULL)
         {
 
             mark_obj(OBJ(tab[i].key));
+            // PTR(tab[i].key.as.String)->mark = true;
             mark_value(tab[i].val);
         }
 }
 
 static void mark_class(Class *c)
 {
-    mark_obj(CLASS(c));
-    mark_obj(OBJ(c->name));
+    PTR(c)->mark = true;
+    PTR(c->name.as.String)->mark = true;
 
     if (c->init)
         mark_closure(&c->init);
@@ -517,28 +520,22 @@ static void mark_roots(void)
     mark_stack(&machine.stack);
 
     Stack *p = NULL;
-    // PTR(machine.call_stack - 1)->mark = true;
+    PTR(machine.call_stack - 1)->mark = true;
 
-    mark_obj(STK(machine.call_stack));
     for (p = machine.call_stack; p && p < p->top; p++)
         mark_closure(&p->as.closure);
 
     p = NULL;
 
-    mark_obj(STK(machine.class_stack));
+    PTR(machine.class_stack - 1)->mark = true;
     for (p = machine.class_stack; p && p < p->top; p++)
         mark_class(p->as.classc);
 
     p = NULL;
-    mark_obj(STK(machine.native_calls));
-    for (p = machine.native_calls; p && p < p->top; p++)
-        mark_obj(NATIVE(p->as.native));
 
-    for (int i = 0; i < machine.frame_count; i++)
-    {
-        Element el = CLOSURE(machine.frames[i].closure);
-        mark_closure(&el.closure);
-    }
+    PTR(machine.native_calls - 1)->mark = true;
+    for (p = machine.native_calls; p && p < p->top; p++)
+        PTR(p->as.native)->mark = true;
 
     p = NULL;
     mark_table(&machine.glob);
@@ -562,6 +559,8 @@ void collect_garbage(void)
     printf("-- gc begin\n");
 #endif
 
+    if (!machine.stack)
+        return;
     mark_roots();
     trace_references();
     sweep();
@@ -619,6 +618,14 @@ void free_ptr(Free *new)
 
     Free *free = NULL, *prev = NULL;
 
+    if (!mem)
+    {
+        mem = new;
+        mem->next = NULL;
+        mem->mark = false;
+        return;
+    }
+
     for (free = mem; free->next && (((unsigned long)free < (unsigned long)new)); free = free->next)
         prev = free->next;
 
@@ -665,17 +672,39 @@ void append_obj(Free *alloced)
         ptr->next = alloced;
     }
 }
+static void _init_free_ptr(Free **ptr, size_t alloc_size, size_t new_size)
+{
+    (*ptr)->next = request_system_memory(alloc_size);
+    (*ptr)->next->size = alloc_size - OFFSET - new_size;
+    (*ptr)->next->next = NULL;
+}
+
+static void *_init_alloced_ptr(void *ptr, size_t size)
+{
+    Free *alloced = NULL;
+    alloced = ptr;
+    alloced->next = NULL;
+    alloced->size = size;
+    alloced->mark = false;
+    append_obj(alloced);
+    return 1 + alloced;
+}
 
 void *alloc_ptr(size_t size)
 {
 
     Free *prev = NULL;
     Free *free = NULL;
-    Free *alloced = NULL;
+    void *alloced = NULL;
+
+    if (!mem)
+        reinitialize_free_list();
 
     machine.bytes_allocated += size;
 
-#ifndef DEBUG_STRESS_GC
+#ifdef DEBUG_STRESS_GC
+    collect_garbage();
+#else
     if (machine.bytes_allocated > machine.next_gc)
         collect_garbage();
 #endif
@@ -686,31 +715,19 @@ void *alloc_ptr(size_t size)
     if (free && free->size >= size)
     {
 
-        size_t tmp = free->size - size;
-        alloced = free + tmp;
-        alloced->size = size - OFFSET;
-        alloced->mark = false;
+        free->size -= size;
 
-        append_obj(alloced);
-
-        free->size = tmp;
-
-        if (mem->size == 0)
-        {
-            reinitialize_free_list();
-            return (void *)++alloced;
-        }
-
-        if (prev && tmp == 0)
+        if (prev && free->size == 0)
             prev->next = free->next;
-        else if (!prev && tmp == 0)
-            mem->next = free->next;
+        else if (!prev && free->size == 0)
+            mem = free->next;
 
+        alloced = _init_alloced_ptr((char *)(free + 1) + free->size, size - OFFSET);
 #ifdef DEBUG_LOG_GC
-        printf("ALLOCED: %p, SIZE: %zu\n", (void *)alloced, size);
+        printf("ALLOCED: %p, SIZE: %zu\n", alloced, size);
 #endif
 
-        return (void *)++alloced;
+        return alloced;
     }
 
     if (prev)
@@ -719,20 +736,15 @@ void *alloc_ptr(size_t size)
         while (size > tmp)
             tmp *= INC;
 
-        prev->next = request_system_memory(tmp * OFFSET);
-        prev->next->size = tmp - size;
+        _init_free_ptr(&prev, tmp, size);
 
-        alloced = prev->next + prev->next->size;
-        alloced->size = size - OFFSET;
-        alloced->mark = false;
+        alloced = _init_alloced_ptr((char *)(prev->next + 1) + prev->next->size, size - OFFSET);
 
 #ifdef DEBUG_LOG_GC
         printf("ALLOCED: %p, SIZE: %zu\n", (void *)alloced, size);
 #endif
 
-        append_obj(alloced);
-
-        return (void *)++alloced;
+        return alloced;
     }
 
     return NULL;
@@ -775,13 +787,7 @@ Arena *arena_realloc_arena(Arena *ar, size_t size)
     machine.bytes_allocated -= (ar - 1)->size;
 
     if (size > (ar - 1)->size)
-    {
         new_size = (ar - 1)->size;
-
-#ifdef DEBUG_STRESS_GC
-        collect_garbage();
-#endif
-    }
     else
         new_size = size;
 
@@ -867,12 +873,7 @@ Arena arena_realloc(Arena *ar, size_t size, T type)
     size_t new_size = 0;
 
     if (size > ar->size)
-    {
         new_size = ar->size;
-#ifdef DEBUG_STRESS_GC
-        collect_garbage();
-#endif
-    }
     else
         new_size = size;
 
@@ -1289,14 +1290,7 @@ Stack *realloc_stack(Stack *st, size_t size)
 
     size_t new_size = 0;
     if (size > (st - 1)->size)
-    {
         new_size = (st - 1)->size;
-
-#ifdef DEBUG_STRESS_GC
-        collect_garbage();
-
-#endif
-    }
     else
         new_size = size;
 
@@ -1590,7 +1584,7 @@ void init_chunk(Chunk *c)
     c->cases.count = 0;
     c->cases = GROW_ARRAY(NULL, MIN_SIZE, ARENA_INTS);
     c->cases.len = PAGE_COUNT;
-    c->constants = GROW_STACK(NULL, STACK_SIZE);
+    c->constants = GROW_STACK(NULL, TABLE_SIZE);
 }
 
 void free_chunk(Chunk *c)

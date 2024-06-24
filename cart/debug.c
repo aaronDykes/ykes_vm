@@ -120,8 +120,10 @@ int disassemble_instruction(Chunk *c, int offset)
         return simple_instruction("OP_GET_CLOSURE", offset);
     case OP_GET_METHOD:
         return simple_instruction("OP_GET_METHOD", offset);
-    case OP_GET_CLASS:
-        return simple_instruction("OP_GET_CLOSURE", offset);
+    case OP_MOV_CLASS_R4:
+        return simple_instruction("OP_MOV_CLASS_R4", offset);
+    case OP_MOV_CLASS_R5:
+        return simple_instruction("OP_MOV_CLASS_R4", offset);
     case OP_NEG:
         return simple_instruction("OP_NEG", offset);
     case OP_LEN:

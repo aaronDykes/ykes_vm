@@ -85,7 +85,8 @@ typedef enum
     OP_FIND_CLOSURE,
     OP_GET_CLOSURE,
     OP_GET_METHOD,
-    OP_GET_CLASS,
+    OP_MOV_CLASS_R4,
+    OP_MOV_CLASS_R5,
 
     OP_GET_INSTANCE,
     OP_GET_NATIVE,
@@ -203,6 +204,8 @@ typedef enum
     OP_MOV_E3_E2,
     OP_ZERO_E1,
     OP_ZERO_E2,
+    OP_ZERO_E4,
+    OP_ZERO_E5,
     OP_ZERO_EL_REGISTERS,
 
     OP_CONDITIONAL_MOV_R1_E1,
@@ -229,8 +232,12 @@ typedef enum
     OP_STR_E2,
     OP_STR_E3,
     OP_STR_E4,
+    OP_STR_E5,
 
     OP_MOV_E4_E2,
+    OP_MOV_E4_E5,
+    OP_MOV_E5_E4,
+    OP_MOV_E5_E2,
 
     OP_ZERO_ARENA_REGISTERS,
     OP_ZERO_R1,
